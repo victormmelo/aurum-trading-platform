@@ -20,11 +20,34 @@ Treat Linear as the source of execution state. Milestones, issue scope, prioriti
 - Do not version real Binance credentials, API secrets, MCP tokens, production keys, or operational secrets.
 - Preserve the current MVP scope unless the Slack Canvas and Linear explicitly say otherwise: Binance Spot Testnet, BTCUSDT, long-only, no leverage, no Mainnet execution.
 
+## Continuing project implementation
+
+When the user asks to continue the project, continue implementation, pick up the next work, or resolve the next Linear issues, do this before changing code:
+
+1. Read the Slack Canvas enough to recover the current product and technical direction.
+2. Inspect the Linear project, milestones, and open issues.
+3. Compare Slack, Linear, and the repository state.
+4. Recommend the next small batch of issues based on technical dependencies, MVP value, implementation risk, and alignment with the Slack Canvas.
+5. Point out issues that look misplaced, duplicated, obsolete, too broad, under-specified, or outside the current MVP.
+6. Propose Linear or Slack Canvas adjustments before applying them, unless the user explicitly asks for direct execution.
+
+The default behavior is to propose the next implementation batch first. Only implement immediately when the user clearly asks to execute a specific issue, plan, or batch.
+
+When summarizing the next work, include:
+
+- Current state of the repo and project.
+- Recommended next Linear issues.
+- Any mismatch between the Slack Canvas, Linear, and code.
+- Suggested changes to Linear or the Slack Canvas, if needed.
+- Validation expected for the proposed work.
+
 ## Documentation governance
 
 Keep Slack, Linear, and the repository synchronized as the project grows.
 
-Update the Slack Canvas when changing or deciding any of the following:
+Use Linear for execution state. Update or propose updates to Linear when work changes status, priority, sequencing, ownership, milestone, issue scope, or acceptance criteria.
+
+Use the Slack Canvas for durable project decisions. Update or propose updates to the Slack Canvas when changing or deciding any of the following:
 
 - Product scope or roadmap.
 - Trading rules, risk rules, or promotion criteria.
@@ -32,7 +55,7 @@ Update the Slack Canvas when changing or deciding any of the following:
 - Security, permission, token, MCP, or audit behavior.
 - Dashboard requirements, reporting behavior, or success criteria.
 
-Update Linear when work changes status, priority, sequencing, ownership, milestone, or acceptance criteria.
+Do not use the Slack Canvas as an issue progress log. Routine implementation progress belongs in Linear comments, issue status, or the final work summary.
 
 ## Frontend design direction
 
