@@ -164,6 +164,27 @@ export async function fetchApi<T>(path: string): Promise<ApiResult<T>> {
   }
 }
 
+export async function postApi<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
+  try {
+    const response = await fetch(`${apiUrl}${path}`, {
+      method: "POST",
+      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      return { ok: false, error: `${response.status} ${response.statusText}`, data: null };
+    }
+    return { ok: true, data: (await response.json()) as T };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Unknown API error",
+      data: null,
+    };
+  }
+}
+
 export async function getDashboardData() {
   const [
     bot,
@@ -186,6 +207,63 @@ export async function getDashboardData() {
   ]);
 
   return { bot, market, portfolio, orders, fills, decisions, strategyConfig, riskConfig };
+}
+
+export type StrategyConfigItem = {
+  id: string;
+  environment: string;
+  version: number;
+  name: string;
+  symbol: string;
+  signal_timeframe: string;
+  regime_timeframe_primary: string;
+  regime_timeframe_secondary: string;
+  parameters: Record<string, unknown>;
+  is_active: boolean;
+  created_by: string | null;
+  activated_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type RiskConfigItem = {
+  id: string;
+  environment: string;
+  version: number;
+  name: string;
+  symbol: string;
+  risk_per_trade_pct: string | null;
+  daily_loss_limit_pct: string | null;
+  max_exposure_pct: string | null;
+  parameters: Record<string, unknown>;
+  is_active: boolean;
+  created_by: string | null;
+  activated_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type StrategyConfigsResponse = {
+  environment: string;
+  symbol: string;
+  configs: StrategyConfigItem[];
+};
+
+export type RiskConfigsResponse = {
+  environment: string;
+  symbol: string;
+  configs: RiskConfigItem[];
+};
+
+export async function getConfigsData() {
+  const [strategyConfigs, riskConfigs, activeStrategy, activeRisk] = await Promise.all([
+    fetchApi<StrategyConfigsResponse>("/configs/strategy"),
+    fetchApi<RiskConfigsResponse>("/configs/risk"),
+    fetchApi<StrategyConfigItem | null>("/configs/strategy/active"),
+    fetchApi<RiskConfigItem | null>("/configs/risk/active"),
+  ]);
+
+  return { strategyConfigs, riskConfigs, activeStrategy, activeRisk };
 }
 
 export function formatMoney(value: string | null | undefined, currency = "USDT") {

@@ -133,6 +133,16 @@ select {
   color: var(--ink);
 }
 
+.navItem.disabled {
+  opacity: 0.54;
+}
+
+.navItem.disabled:hover {
+  background: transparent;
+  color: #f3f0ee;
+  cursor: not-allowed;
+}
+
 .workspace {
   display: flex;
   flex-direction: column;
@@ -221,6 +231,11 @@ h3 {
 }
 
 .statusPill.ok {
+  border-color: rgba(22, 114, 79, 0.45);
+  color: var(--green);
+}
+
+.noticePanel.success {
   border-color: rgba(22, 114, 79, 0.45);
   color: var(--green);
 }
@@ -565,6 +580,151 @@ h3 {
   word-break: break-word;
 }
 
+.configHeroGrid,
+.configGrid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.activeConfigCard {
+  min-height: 318px;
+}
+
+.configList {
+  display: grid;
+  gap: 14px;
+}
+
+.configRow {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 32px;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.configRow.active {
+  border-color: rgba(22, 114, 79, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(22, 114, 79, 0.12);
+}
+
+.configRowHeader {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.configMetaGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.configForm {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fieldGroup {
+  display: grid;
+  gap: 7px;
+}
+
+.fieldGroup.wide {
+  grid-column: 1 / -1;
+}
+
+.fieldGroup span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.fieldGroup input,
+.fieldGroup textarea {
+  background: var(--white);
+  border: 1.5px solid var(--line);
+  border-radius: 20px;
+  color: var(--ink);
+  min-height: 44px;
+  padding: 10px 14px;
+  width: 100%;
+}
+
+.fieldGroup textarea {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.fieldGroup input:focus,
+.fieldGroup textarea:focus {
+  border-color: var(--orange);
+  outline: none;
+}
+
+.primaryButton,
+.iconTextButton {
+  align-items: center;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  display: inline-flex;
+  font-weight: 500;
+  gap: 8px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+}
+
+.primaryButton {
+  background: var(--ink);
+  color: var(--canvas);
+  grid-column: 1 / -1;
+}
+
+.iconTextButton {
+  background: var(--white);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.iconTextButton:hover {
+  background: var(--ink);
+  color: var(--canvas);
+}
+
+.jsonDetails {
+  background: var(--ink);
+  border-radius: 24px;
+  color: var(--canvas);
+  padding: 12px 14px;
+}
+
+.jsonDetails summary {
+  align-items: center;
+  color: var(--orange-light);
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 8px;
+}
+
+.jsonDetails pre {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 12px 0 0;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 @media (max-width: 1100px) {
   .shell {
     grid-template-columns: 1fr;
@@ -580,7 +740,9 @@ h3 {
 
   .metricsGrid,
   .contentGrid,
-  .marketStats {
+  .marketStats,
+  .configHeroGrid,
+  .configGrid {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -608,13 +770,23 @@ h3 {
   .marketStats,
   .riskGrid,
   .auditMeta,
-  .jsonGrid {
+  .jsonGrid,
+  .configHeroGrid,
+  .configGrid,
+  .configMetaGrid,
+  .configForm {
     grid-template-columns: 1fr;
   }
 
   .tableRow,
-  .decisionRow {
+  .decisionRow,
+  .configRowHeader {
     grid-template-columns: 1fr;
+  }
+
+  .configRowHeader {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .tableRow strong {

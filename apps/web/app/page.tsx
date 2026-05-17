@@ -25,14 +25,14 @@ import {
 } from "@/lib/api";
 
 const navItems = [
-  ["Dashboard", "/", Gauge],
-  ["Mercado", "/", LineChart],
-  ["Carteira", "/", Wallet],
-  ["Operações", "/", Activity],
-  ["Decisões", "/decisions", Bot],
-  ["Estratégias", "/", Settings2],
-  ["MCP", "/", KeyRound],
-  ["Exportações", "/", FileDown],
+  { label: "Dashboard", href: "/", icon: Gauge, disabled: false },
+  { label: "Mercado", href: "/", icon: LineChart, disabled: false },
+  { label: "Carteira", href: "/", icon: Wallet, disabled: false },
+  { label: "Operações", href: "/", icon: Activity, disabled: false },
+  { label: "Decisões", href: "/decisions", icon: Bot, disabled: false },
+  { label: "Estratégias", href: "/configs", icon: Settings2, disabled: false },
+  { label: "MCP", href: "/", icon: KeyRound, disabled: true },
+  { label: "Exportações", href: "/", icon: FileDown, disabled: false },
 ] as const;
 
 export default async function DashboardPage() {
@@ -69,8 +69,18 @@ export default async function DashboardPage() {
           </div>
         </div>
         <nav className="nav" aria-label="Navegação principal">
-          {navItems.map(([label, href, Icon], index) => (
-            <Link className={index === 0 ? "navItem active" : "navItem"} href={href} key={label}>
+          {navItems.map(({ label, href, icon: Icon, disabled }, index) => (
+            <Link
+              aria-disabled={disabled ? "true" : undefined}
+              className={[
+                "navItem",
+                index === 0 ? "active" : "",
+                disabled ? "disabled" : "",
+              ].join(" ")}
+              href={href}
+              key={label}
+              title={disabled ? "MCP será habilitado após VIC-33" : undefined}
+            >
               <Icon size={18} aria-hidden="true" />
               <span>{label}</span>
             </Link>

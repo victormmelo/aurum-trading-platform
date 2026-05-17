@@ -83,6 +83,10 @@ npm run build
 npm run dev
 ```
 
+The frontend toolchain requires Node.js 22 or newer, as declared in
+`apps/web/package.json`. Older system Node versions can fail before ESLint or
+Next.js start.
+
 ## Agent workflow
 
 Agents working on this repository should follow [AGENTS.md](AGENTS.md). The Slack Canvas is the central project documentation, Linear is the source of task execution state, and frontend work should align with the `npx getdesign@latest add mastercard` design direction.
