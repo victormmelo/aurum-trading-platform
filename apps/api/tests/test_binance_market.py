@@ -3,7 +3,11 @@ from decimal import Decimal
 
 import pytest
 
-from app.market.binance import BinanceMarketError, BinanceMarketClient, parse_kline
+from app.market.binance import (
+    BinanceMarketClient,
+    BinanceMarketError,
+    parse_kline,
+)
 
 
 def test_parse_kline_normalizes_binance_payload() -> None:
