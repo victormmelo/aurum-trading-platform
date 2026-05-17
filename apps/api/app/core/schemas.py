@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -251,3 +252,36 @@ class DecisionsResponse(BaseModel):
     environment: str
     symbol: str
     decisions: list[DecisionLogResponse]
+
+
+ExportFormat = Literal["csv", "txt", "pdf"]
+ExportSection = Literal["market", "portfolio", "operations", "decisions"]
+
+
+class ExportCreateRequest(BaseModel):
+    format: ExportFormat
+    sections: list[ExportSection] = Field(
+        default_factory=lambda: ["market", "portfolio", "operations", "decisions"]
+    )
+    period_start: datetime | None = None
+    period_end: datetime | None = None
+    decision: Literal["COMPRA", "VENDA", "MANTER_POSICAO", "NAO_OPERAR"] | None = None
+    order_side: Literal["BUY", "SELL"] | None = None
+    order_status: (
+        Literal["NEW", "PARTIALLY_FILLED", "FILLED", "CANCELED", "REJECTED", "EXPIRED"] | None
+    ) = None
+
+
+class ExportJobResponse(BaseModel):
+    id: UUID
+    environment: str
+    symbol: str
+    status: Literal["completed"]
+    format: ExportFormat
+    sections: list[ExportSection]
+    content_type: str
+    filename: str
+    created_at: datetime
+    completed_at: datetime
+    filters: dict
+    content: str

@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from app.api.routes.bot import router as bot_router
 from app.api.routes.configs import router as configs_router
 from app.api.routes.decisions import router as decisions_router
+from app.api.routes.exports import router as exports_router
 from app.api.routes.health import router as health_router
 from app.api.routes.market import router as market_router
 from app.api.routes.operations import router as operations_router
@@ -25,6 +26,7 @@ def create_app() -> FastAPI:
     app.include_router(portfolio_router)
     app.include_router(operations_router)
     app.include_router(decisions_router)
+    app.include_router(exports_router)
     return app
 
 
