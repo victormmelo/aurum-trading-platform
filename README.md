@@ -2,7 +2,7 @@
 
 Aurum is an operational platform for observing, controlling, and auditing an autonomous BTCUSDT trading robot. The MVP targets Binance Spot Testnet, long-only operation, and a progressive path through local development, paper trading, Testnet validation, and only later controlled Mainnet usage.
 
-The first cycle creates the project foundation: FastAPI backend, Next.js frontend, PostgreSQL, Redis, Docker Compose, and placeholders for worker and MCP services. It does not implement live trading, Binance credentials, a full database schema, or a functional MCP server yet.
+The first cycles create the project foundation: FastAPI backend, Next.js frontend, PostgreSQL, Redis, Docker Compose, Binance read-only market data, the initial operational schema, strategy components, and a dry-run worker cycle. The worker records auditable bot runs and decisions, but it does not submit orders to Binance or require trading credentials.
 
 ## Monorepo layout
 
@@ -11,7 +11,7 @@ apps/
   api/           FastAPI backend
   web/           Next.js dashboard
 services/
-  worker/        Trading and market worker placeholder
+  worker/        Dry-run trading cycle worker
   mcp-server/    Read-only MCP server placeholder
 infra/
   docker/        Dockerfiles for local services
@@ -24,7 +24,7 @@ scripts/         Local helper scripts
 - `web`: Next.js operational dashboard with mocked BTCUSDT/Testnet data.
 - `postgres`: PostgreSQL 16 for future transactional data.
 - `redis`: Redis for future cache, queues, locks, and rate limits.
-- `worker`: placeholder for market and trading cycles.
+- `worker`: dry-run trading cycle that persists `bot_runs` and `decision_logs`.
 - `mcp-server`: placeholder for read-only agent access.
 
 ## Local setup
@@ -63,6 +63,14 @@ Import initial BTCUSDT candles after PostgreSQL migrations are applied:
 
 ```bash
 aurum-import-candles --interval 1h --interval 4h --interval 1d --limit 500
+```
+
+Run one dry-run worker cycle after migrations, configs, runtime state, market data, and a portfolio snapshot exist:
+
+```bash
+cd apps/api
+. .venv/bin/activate
+python ../../services/worker/main.py
 ```
 
 Frontend:
