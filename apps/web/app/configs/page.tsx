@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   SlidersHorizontal,
 } from "lucide-react";
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import {
@@ -17,6 +16,23 @@ import {
   createRiskConfig,
   createStrategyConfig,
 } from "@/app/configs/actions";
+import {
+  BackLink,
+  CompactList,
+  EmptyState,
+  IconTextButton,
+  InfoRow,
+  JsonDetails,
+  LabeledInput,
+  LabeledTextarea,
+  Notice,
+  PageHeader,
+  Panel,
+  PanelHeader,
+  PrimaryButton,
+  StatusPill,
+  cx,
+} from "@/components/ui";
 import {
   compactJson,
   formatDateTime,
@@ -52,48 +68,44 @@ export default async function ConfigsPage({
     "BTCUSDT";
 
   return (
-    <main className="detailShell">
-      <header className="detailHeader">
-        <Link className="backLink" href="/">
-          <ArrowLeft size={18} aria-hidden="true" />
-          Dashboard
-        </Link>
-        <div>
-          <p className="eyebrow">Configurações {environment}</p>
-          <h1>Estratégia e risco</h1>
-        </div>
-        <span className="statusPill">
-          <ShieldCheck size={16} aria-hidden="true" />
-          {symbol} long-only
-        </span>
-      </header>
+    <main className="mx-auto grid min-h-screen max-w-[1220px] gap-6 p-6 max-md:p-4">
+      <PageHeader
+        leading={
+          <BackLink href="/" icon={<ArrowLeft size={18} aria-hidden="true" />}>
+            Dashboard
+          </BackLink>
+        }
+        eyebrow={`Configurações ${environment}`}
+        title="Estratégia e risco"
+        trailing={
+          <StatusPill>
+            <ShieldCheck size={16} aria-hidden="true" />
+            {symbol} long-only
+          </StatusPill>
+        }
+      />
 
       {success ? (
-        <section className="noticePanel success">
-          <CheckCircle2 size={18} aria-hidden="true" />
-          <span>{success}</span>
-        </section>
+        <Notice tone="positive" icon={<CheckCircle2 size={18} aria-hidden="true" />}>
+          {success}
+        </Notice>
       ) : null}
       {error ? (
-        <section className="noticePanel danger">
-          <CircleAlert size={18} aria-hidden="true" />
-          <span>{error}</span>
-        </section>
+        <Notice tone="danger" icon={<CircleAlert size={18} aria-hidden="true" />}>
+          {error}
+        </Notice>
       ) : null}
       {!strategyResult.ok || !riskResult.ok ? (
-        <section className="noticePanel danger">
-          <CircleAlert size={18} aria-hidden="true" />
-          <span>
-            API sem resposta completa:{" "}
-            {[strategyResult, riskResult]
-              .filter((result) => !result.ok)
-              .map((result) => (result.ok ? "" : result.error))
-              .join(" / ")}
-          </span>
-        </section>
+        <Notice tone="danger" icon={<CircleAlert size={18} aria-hidden="true" />}>
+          API sem resposta completa:{" "}
+          {[strategyResult, riskResult]
+            .filter((result) => !result.ok)
+            .map((result) => (result.ok ? "" : result.error))
+            .join(" / ")}
+        </Notice>
       ) : null}
 
-      <section className="configHeroGrid" aria-label="Configurações ativas">
+      <section className="grid grid-cols-2 gap-[18px] max-md:grid-cols-1" aria-label="Configurações ativas">
         <ActiveConfigCard
           title="Estratégia ativa"
           icon={<SlidersHorizontal />}
@@ -131,16 +143,11 @@ export default async function ConfigsPage({
         />
       </section>
 
-      <section className="configGrid">
-        <ConfigPanel
-          eyebrow="Estratégia"
-          title="Versões"
-          icon={<ListChecks />}
-          emptyText="Sem versões de estratégia."
-        >
-          <div className="configList">
+      <section className="grid grid-cols-2 gap-[18px] max-md:grid-cols-1">
+        <ConfigPanel eyebrow="Estratégia" title="Versões" icon={<ListChecks />}>
+          <div className="grid gap-3.5">
             {strategyConfigs.length === 0 ? (
-              <div className="emptyState">Sem versões de estratégia.</div>
+              <EmptyState>Sem versões de estratégia.</EmptyState>
             ) : (
               strategyConfigs.map((config) => (
                 <StrategyConfigRow config={config} key={config.id} />
@@ -149,15 +156,10 @@ export default async function ConfigsPage({
           </div>
         </ConfigPanel>
 
-        <ConfigPanel
-          eyebrow="Risco"
-          title="Versões"
-          icon={<ShieldCheck />}
-          emptyText="Sem versões de risco."
-        >
-          <div className="configList">
+        <ConfigPanel eyebrow="Risco" title="Versões" icon={<ShieldCheck />}>
+          <div className="grid gap-3.5">
             {riskConfigs.length === 0 ? (
-              <div className="emptyState">Sem versões de risco.</div>
+              <EmptyState>Sem versões de risco.</EmptyState>
             ) : (
               riskConfigs.map((config) => <RiskConfigRow config={config} key={config.id} />)
             )}
@@ -165,14 +167,9 @@ export default async function ConfigsPage({
         </ConfigPanel>
       </section>
 
-      <section className="configGrid">
-        <ConfigPanel
-          eyebrow="Nova versão"
-          title="Estratégia"
-          icon={<FileJson />}
-          emptyText=""
-        >
-          <form action={createStrategyConfig} className="configForm">
+      <section className="grid grid-cols-2 gap-[18px] max-md:grid-cols-1">
+        <ConfigPanel eyebrow="Nova versão" title="Estratégia" icon={<FileJson />}>
+          <form action={createStrategyConfig} className="grid grid-cols-2 gap-3.5 max-md:grid-cols-1">
             <LabeledInput label="Versão" name="version" type="number" min="1" required />
             <LabeledInput label="Nome" name="name" defaultValue="breakout_trend_v1" />
             <LabeledInput label="Timeframe sinal" name="signal_timeframe" defaultValue="1h" />
@@ -184,14 +181,14 @@ export default async function ConfigsPage({
               placeholder='{"breakout_window":20,"rsi_min":50,"rsi_max":75}'
             />
             <LabeledInput label="Criado por" name="created_by" defaultValue="operator" />
-            <button className="primaryButton" type="submit">
-              Criar estratégia
-            </button>
+            <div className="col-span-full">
+              <PrimaryButton>Criar estratégia</PrimaryButton>
+            </div>
           </form>
         </ConfigPanel>
 
-        <ConfigPanel eyebrow="Nova versão" title="Risco" icon={<FileJson />} emptyText="">
-          <form action={createRiskConfig} className="configForm">
+        <ConfigPanel eyebrow="Nova versão" title="Risco" icon={<FileJson />}>
+          <form action={createRiskConfig} className="grid grid-cols-2 gap-3.5 max-md:grid-cols-1">
             <LabeledInput label="Versão" name="version" type="number" min="1" required />
             <LabeledInput label="Nome" name="name" defaultValue="mvp_risk_v1" />
             <LabeledInput label="Risco/trade %" name="risk_per_trade_pct" placeholder="1.0" />
@@ -203,9 +200,9 @@ export default async function ConfigsPage({
               placeholder='{"atr_stop_multiplier":2,"trailing_stop_pct":5}'
             />
             <LabeledInput label="Criado por" name="created_by" defaultValue="operator" />
-            <button className="primaryButton" type="submit">
-              Criar risco
-            </button>
+            <div className="col-span-full">
+              <PrimaryButton>Criar risco</PrimaryButton>
+            </div>
           </form>
         </ConfigPanel>
       </section>
@@ -225,18 +222,18 @@ function ActiveConfigCard({
   emptyText: string;
 }) {
   return (
-    <article className="panel activeConfigCard">
+    <Panel className="min-h-[318px]">
       <PanelHeader eyebrow="Ativa" title={title} icon={icon} />
       {rows.length === 0 ? (
-        <div className="emptyState">{emptyText}</div>
+        <EmptyState>{emptyText}</EmptyState>
       ) : (
-        <div className="tableList">
+        <CompactList>
           {rows.map(([label, value]) => (
             <InfoRow label={label} value={value} key={label} />
           ))}
-        </div>
+        </CompactList>
       )}
-    </article>
+    </Panel>
   );
 }
 
@@ -249,43 +246,42 @@ function ConfigPanel({
   eyebrow: string;
   title: string;
   icon: ReactNode;
-  emptyText: string;
   children: ReactNode;
 }) {
   return (
-    <article className="panel">
+    <Panel>
       <PanelHeader eyebrow={eyebrow} title={title} icon={icon} />
       {children}
-    </article>
+    </Panel>
   );
 }
 
 function StrategyConfigRow({ config }: { config: StrategyConfigItem }) {
   return (
-    <article className={config.is_active ? "configRow active" : "configRow"}>
+    <article className={configRowClass(config.is_active)}>
       <ConfigRowHeader config={config} action={activateStrategyConfig} />
-      <div className="configMetaGrid">
+      <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
         <InfoRow label="Sinal" value={config.signal_timeframe} />
         <InfoRow label="Regime" value={`${config.regime_timeframe_primary} / ${config.regime_timeframe_secondary}`} />
         <InfoRow label="Criado" value={formatDateTime(config.created_at)} />
         <InfoRow label="Ativado" value={formatDateTime(config.activated_at)} />
       </div>
-      <JsonPreview value={config.parameters} />
+      <JsonDetails label="Parâmetros" value={compactJson(config.parameters)} icon={<FileJson size={16} aria-hidden="true" />} />
     </article>
   );
 }
 
 function RiskConfigRow({ config }: { config: RiskConfigItem }) {
   return (
-    <article className={config.is_active ? "configRow active" : "configRow"}>
+    <article className={configRowClass(config.is_active)}>
       <ConfigRowHeader config={config} action={activateRiskConfig} />
-      <div className="configMetaGrid">
+      <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
         <InfoRow label="Risco/trade" value={percentLabel(config.risk_per_trade_pct)} />
         <InfoRow label="Perda diária" value={percentLabel(config.daily_loss_limit_pct)} />
         <InfoRow label="Exposição máx." value={percentLabel(config.max_exposure_pct)} />
         <InfoRow label="Ativado" value={formatDateTime(config.activated_at)} />
       </div>
-      <JsonPreview value={config.parameters} />
+      <JsonDetails label="Parâmetros" value={compactJson(config.parameters)} icon={<FileJson size={16} aria-hidden="true" />} />
     </article>
   );
 }
@@ -298,116 +294,35 @@ function ConfigRowHeader({
   action: (formData: FormData) => Promise<void>;
 }) {
   return (
-    <div className="configRowHeader">
+    <div className="flex items-start justify-between gap-4 max-md:flex-col max-md:items-stretch">
       <div>
-        <p className="eyebrow">v{config.version}</p>
-        <h2>{config.name}</h2>
+        <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase leading-none tracking-[0.56px] text-muted before:block before:size-1.5 before:rounded-full before:bg-signal before:content-['']">
+          v{config.version}
+        </p>
+        <h2 className="m-0 text-2xl font-medium leading-tight tracking-[-0.02em]">{config.name}</h2>
       </div>
       {config.is_active ? (
-        <span className="statusPill ok">
+        <StatusPill tone="positive">
           <CheckCircle2 size={16} aria-hidden="true" />
           Ativa
-        </span>
+        </StatusPill>
       ) : (
         <form action={action}>
           <input type="hidden" name="id" value={config.id} />
-          <button className="iconTextButton" type="submit">
+          <IconTextButton>
             <CirclePlay size={16} aria-hidden="true" />
             Ativar
-          </button>
+          </IconTextButton>
         </form>
       )}
     </div>
   );
 }
 
-function PanelHeader({
-  eyebrow,
-  title,
-  icon,
-}: {
-  eyebrow: string;
-  title: string;
-  icon: ReactNode;
-}) {
-  return (
-    <div className="panelHeader">
-      <div>
-        <p className="eyebrow">{eyebrow}</p>
-        <h2>{title}</h2>
-      </div>
-      <span className="iconOrbit">{icon}</span>
-    </div>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="tableRow">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function JsonPreview({ value }: { value: Record<string, unknown> }) {
-  return (
-    <details className="jsonDetails">
-      <summary>
-        <FileJson size={16} aria-hidden="true" />
-        Parâmetros
-      </summary>
-      <pre>{compactJson(value)}</pre>
-    </details>
-  );
-}
-
-function LabeledInput({
-  label,
-  name,
-  type = "text",
-  defaultValue,
-  placeholder,
-  min,
-  required,
-}: {
-  label: string;
-  name: string;
-  type?: string;
-  defaultValue?: string;
-  placeholder?: string;
-  min?: string;
-  required?: boolean;
-}) {
-  return (
-    <label className="fieldGroup">
-      <span>{label}</span>
-      <input
-        name={name}
-        type={type}
-        defaultValue={defaultValue}
-        placeholder={placeholder}
-        min={min}
-        required={required}
-      />
-    </label>
-  );
-}
-
-function LabeledTextarea({
-  label,
-  name,
-  placeholder,
-}: {
-  label: string;
-  name: string;
-  placeholder: string;
-}) {
-  return (
-    <label className="fieldGroup wide">
-      <span>{label}</span>
-      <textarea name={name} placeholder={placeholder} rows={5} />
-    </label>
+function configRowClass(isActive: boolean) {
+  return cx(
+    "grid gap-4 rounded-[32px] border border-line bg-aurum-white p-[18px]",
+    isActive && "border-success/45 shadow-[inset_0_0_0_1px_rgba(22,114,79,0.12)]",
   );
 }
 

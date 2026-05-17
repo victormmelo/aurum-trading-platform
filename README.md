@@ -87,9 +87,17 @@ The frontend toolchain requires Node.js 22 or newer, as declared in
 `apps/web/package.json`. Older system Node versions can fail before ESLint or
 Next.js start.
 
+Frontend implementation standards:
+
+- Read `DESIGN.md` before changing UI.
+- Use TailwindCSS for component styling.
+- Keep `apps/web/app/globals.css` limited to Tailwind import, design tokens, and minimal base styles.
+- Reuse components from `apps/web/components` before creating new UI patterns.
+- Preserve an operational dashboard experience instead of introducing landing-page patterns.
+
 ## Agent workflow
 
-Agents working on this repository should follow [AGENTS.md](AGENTS.md). The Slack Canvas is the central project documentation, Linear is the source of task execution state, and frontend work should align with the `npx getdesign@latest add mastercard` design direction.
+Agents working on this repository should follow [AGENTS.md](AGENTS.md). The Slack Canvas is the central project documentation, Linear is the source of task execution state, and frontend work should align with `DESIGN.md`, the `npx getdesign@latest add mastercard` design direction, TailwindCSS, and reusable components in `apps/web/components`.
 
 ## Safety assumptions
 

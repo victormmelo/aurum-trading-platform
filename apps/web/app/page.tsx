@@ -13,8 +13,22 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
 
+import { AppShell } from "@/components/app-shell";
+import {
+  CompactList,
+  EmptyState,
+  InfoRow,
+  MetricCard,
+  Notice,
+  PageHeader,
+  Panel,
+  PanelHeader,
+  StatPill,
+  StatusCluster,
+  StatusPill,
+  type NavItem,
+} from "@/components/ui";
 import {
   apiUrl,
   appEnv,
@@ -25,15 +39,21 @@ import {
 } from "@/lib/api";
 
 const navItems = [
-  { label: "Dashboard", href: "/", icon: Gauge, disabled: false },
-  { label: "Mercado", href: "/", icon: LineChart, disabled: false },
-  { label: "Carteira", href: "/", icon: Wallet, disabled: false },
-  { label: "Operações", href: "/", icon: Activity, disabled: false },
-  { label: "Decisões", href: "/decisions", icon: Bot, disabled: false },
-  { label: "Estratégias", href: "/configs", icon: Settings2, disabled: false },
-  { label: "MCP", href: "/", icon: KeyRound, disabled: true },
-  { label: "Exportações", href: "/", icon: FileDown, disabled: false },
-] as const;
+  { label: "Dashboard", href: "/", icon: Gauge },
+  { label: "Mercado", href: "/", icon: LineChart },
+  { label: "Carteira", href: "/", icon: Wallet },
+  { label: "Operações", href: "/", icon: Activity },
+  { label: "Decisões", href: "/decisions", icon: Bot },
+  { label: "Estratégias", href: "/configs", icon: Settings2 },
+  {
+    label: "MCP",
+    href: "/",
+    icon: KeyRound,
+    disabled: true,
+    title: "MCP será habilitado após VIC-33",
+  },
+  { label: "Exportações", href: "/", icon: FileDown },
+] as const satisfies readonly NavItem[];
 
 export default async function DashboardPage() {
   const data = await getDashboardData();
@@ -56,238 +76,150 @@ export default async function DashboardPage() {
   ].every((result) => result.ok);
 
   return (
-    <main className="shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="brandMark">
-            <span />
-            <span />
-          </div>
-          <div>
-            <strong>Aurum</strong>
-            <span>BTC Testnet</span>
-          </div>
-        </div>
-        <nav className="nav" aria-label="Navegação principal">
-          {navItems.map(({ label, href, icon: Icon, disabled }, index) => (
-            <Link
-              aria-disabled={disabled ? "true" : undefined}
-              className={[
-                "navItem",
-                index === 0 ? "active" : "",
-                disabled ? "disabled" : "",
-              ].join(" ")}
-              href={href}
-              key={label}
-              title={disabled ? "MCP será habilitado após VIC-33" : undefined}
-            >
-              <Icon size={18} aria-hidden="true" />
-              <span>{label}</span>
-            </Link>
-          ))}
-        </nav>
-      </aside>
-
-      <section className="workspace">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Ambiente {bot?.environment ?? appEnv}</p>
-            <h1>Dashboard operacional</h1>
-          </div>
-          <div className="statusCluster" aria-label="Status do sistema">
-            <span className={apiHealthy ? "statusPill ok" : "statusPill danger"}>
+    <AppShell navItems={navItems} activeLabel="Dashboard">
+      <PageHeader
+        eyebrow={`Ambiente ${bot?.environment ?? appEnv}`}
+        title="Dashboard operacional"
+        trailing={
+          <StatusCluster>
+            <StatusPill tone={apiHealthy ? "positive" : "danger"}>
               <Database size={16} aria-hidden="true" />
               API {apiHealthy ? "online" : "indisponível"}
-            </span>
-            <span className="statusPill">
+            </StatusPill>
+            <StatusPill>
               <ShieldCheck size={16} aria-hidden="true" />
               {bot?.trading_mode ?? "testnet"} / {bot?.symbol ?? "BTCUSDT"}
-            </span>
-            <span className={bot?.status === "running" ? "statusPill ok" : "statusPill warning"}>
+            </StatusPill>
+            <StatusPill tone={bot?.status === "running" ? "positive" : "warning"}>
               <CirclePause size={16} aria-hidden="true" />
               {bot?.status ?? "sem estado"}
-            </span>
-          </div>
-        </header>
+            </StatusPill>
+          </StatusCluster>
+        }
+      />
 
-        {!apiHealthy ? (
-          <section className="noticePanel">
-            <AlertTriangle size={18} aria-hidden="true" />
-            <span>API {apiUrl} sem resposta completa.</span>
-          </section>
-        ) : null}
+      {!apiHealthy ? (
+        <Notice icon={<AlertTriangle size={18} aria-hidden="true" />}>
+          API {apiUrl} sem resposta completa.
+        </Notice>
+      ) : null}
 
-        <section className="metricsGrid" aria-label="Indicadores principais">
-          <MetricCard
-            label="BTCUSDT"
-            value={formatMoney(market?.last_price, "USDT")}
-            detail={`Captura ${formatDateTime(market?.captured_at)}`}
-            tone={market ? "positive" : "neutral"}
-          />
-          <MetricCard
-            label="Robô"
-            value={bot?.status ?? "sem estado"}
-            detail={`Último ciclo ${formatDateTime(bot?.last_cycle_at)}`}
-            tone={bot?.status === "running" ? "positive" : "warning"}
-          />
-          <MetricCard
-            label="Patrimônio"
-            value={formatMoney(portfolioSnapshot?.total_equity)}
-            detail={`Exposição ${portfolioSnapshot?.exposure_pct ?? "0"}%`}
-            tone="neutral"
-          />
-          <MetricCard
-            label="Última decisão"
-            value={decisions[0]?.decision ?? "sem decisão"}
-            detail={decisions[0]?.reason ?? "Aguardando ciclo auditável"}
-            tone={decisions[0]?.decision === "COMPRA" ? "positive" : "warning"}
-          />
-        </section>
-
-        <section className="contentGrid">
-          <article className="panel marketPanel">
-            <PanelHeader eyebrow="Mercado" title="BTCUSDT 1h / 4h / 1d" icon={<LineChart />} />
-            <div className="chartMock" aria-label="Indicadores de mercado">
-              {["1h", "4h", "1d", "ATR", "RSI", "VOL"].map((label, index) => (
-                <span
-                  className="signalBar"
-                  key={label}
-                  style={{ height: `${32 + index * 9}%` }}
-                  title={label}
-                />
-              ))}
-            </div>
-            <div className="marketStats">
-              <StatPill label="Tendência 1h" value={market?.trend_1h ?? "sem dado"} />
-              <StatPill label="Tendência 4h" value={market?.trend_4h ?? "sem dado"} />
-              <StatPill label="Tendência 1d" value={market?.trend_1d ?? "sem dado"} />
-              <StatPill label="Origem" value={sourceLabel(market?.source_payload)} />
-            </div>
-          </article>
-
-          <article className="panel">
-            <PanelHeader eyebrow="Carteira" title="Saldo e posição" icon={<Wallet />} />
-            <div className="tableList">
-              <InfoRow label="USDT" value={formatMoney(portfolioSnapshot?.usdt_balance)} />
-              <InfoRow label="BTC" value={formatQuantity(portfolioSnapshot?.btc_balance)} />
-              <InfoRow label="Custo médio" value={formatMoney(portfolioSnapshot?.average_cost)} />
-              <InfoRow label="PnL não realizado" value={formatMoney(portfolioSnapshot?.unrealized_pnl)} />
-            </div>
-          </article>
-
-          <article className="panel">
-            <PanelHeader eyebrow="Decisões" title="Últimos ciclos" icon={<Bot />} />
-            <div className="decisionList">
-              {decisions.length === 0 ? (
-                <EmptyState text="Sem decisões registradas." />
-              ) : (
-                decisions.map((decision) => (
-                  <div className="decisionRow" key={decision.id}>
-                    <time>{formatDateTime(decision.decided_at)}</time>
-                    <strong>{decision.decision}</strong>
-                    <span>{decision.reason}</span>
-                    <Link href={`/decisions?decision=${decision.decision}`}>Abrir</Link>
-                  </div>
-                ))
-              )}
-            </div>
-          </article>
-
-          <article className="panel">
-            <PanelHeader eyebrow="Risco" title="Bloqueios e limites" icon={<ShieldCheck />} />
-            <div className="riskGrid">
-              <StatPill label="Risco/trade" value={percentLabel(risk?.risk_per_trade_pct)} />
-              <StatPill label="Perda diária" value={percentLabel(risk?.daily_loss_limit_pct)} />
-              <StatPill label="Exposição máx." value={percentLabel(risk?.max_exposure_pct)} />
-              <StatPill label="Config" value={risk ? `v${risk.version}` : "sem config"} />
-            </div>
-          </article>
-
-          <article className="panel">
-            <PanelHeader eyebrow="Operações" title="Ordens e fills" icon={<Activity />} />
-            <div className="tableList">
-              <InfoRow label="Ordens recentes" value={String(orders.length)} />
-              <InfoRow label="Fills recentes" value={String(fills.length)} />
-              <InfoRow label="Última ordem" value={orders[0]?.status ?? "sem ordem"} />
-              <InfoRow label="Último fill" value={formatDateTime(fills[0]?.filled_at)} />
-            </div>
-          </article>
-
-          <article className="panel">
-            <PanelHeader eyebrow="Estratégia" title="Config ativa" icon={<Settings2 />} />
-            <div className="tableList">
-              <InfoRow label="Nome" value={strategy?.name ?? "sem config"} />
-              <InfoRow label="Versão" value={strategy ? `v${strategy.version}` : "-"} />
-              <InfoRow label="Sinal" value={strategy?.signal_timeframe ?? "-"} />
-              <InfoRow label="Regime" value={strategy?.regime_timeframe_primary ?? "-"} />
-            </div>
-          </article>
-        </section>
+      <section className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1" aria-label="Indicadores principais">
+        <MetricCard
+          label="BTCUSDT"
+          value={formatMoney(market?.last_price, "USDT")}
+          detail={`Captura ${formatDateTime(market?.captured_at)}`}
+          tone={market ? "positive" : "neutral"}
+        />
+        <MetricCard
+          label="Robô"
+          value={bot?.status ?? "sem estado"}
+          detail={`Último ciclo ${formatDateTime(bot?.last_cycle_at)}`}
+          tone={bot?.status === "running" ? "positive" : "warning"}
+        />
+        <MetricCard
+          label="Patrimônio"
+          value={formatMoney(portfolioSnapshot?.total_equity)}
+          detail={`Exposição ${portfolioSnapshot?.exposure_pct ?? "0"}%`}
+          tone="neutral"
+        />
+        <MetricCard
+          label="Última decisão"
+          value={decisions[0]?.decision ?? "sem decisão"}
+          detail={decisions[0]?.reason ?? "Aguardando ciclo auditável"}
+          tone={decisions[0]?.decision === "COMPRA" ? "positive" : "warning"}
+        />
       </section>
-    </main>
-  );
-}
 
-function MetricCard({
-  label,
-  value,
-  detail,
-  tone,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  tone: "positive" | "warning" | "neutral";
-}) {
-  return (
-    <article className="metricCard">
-      <span>{label}</span>
-      <strong className={`metricValue ${tone}`}>{value}</strong>
-      <small>{detail}</small>
-    </article>
-  );
-}
+      <section className="grid grid-cols-[minmax(0,1.25fr)_minmax(330px,0.75fr)] gap-[18px] max-lg:grid-cols-2 max-md:grid-cols-1">
+        <Panel className="row-span-2 max-lg:row-auto">
+          <PanelHeader eyebrow="Mercado" title="BTCUSDT 1h / 4h / 1d" icon={<LineChart />} />
+          <div
+            className="grid h-[318px] grid-cols-6 items-end gap-3 rounded-[40px] border border-line bg-[linear-gradient(180deg,rgba(243,115,56,0.12),rgba(243,115,56,0)),repeating-linear-gradient(0deg,transparent,transparent_47px,rgba(20,20,19,0.07)_48px)] p-6"
+            aria-label="Indicadores de mercado"
+          >
+            {["1h", "4h", "1d", "ATR", "RSI", "VOL"].map((label, index) => (
+              <span
+                className="relative min-h-[34px] rounded-t-full rounded-b-[10px] bg-ink after:absolute after:-top-[18px] after:left-1/2 after:size-2.5 after:-translate-x-1/2 after:rounded-full after:bg-signal-light after:content-['']"
+                key={label}
+                style={{ height: `${32 + index * 9}%` }}
+                title={label}
+              />
+            ))}
+          </div>
+          <div className="mt-4 grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+            <StatPill label="Tendência 1h" value={market?.trend_1h ?? "sem dado"} />
+            <StatPill label="Tendência 4h" value={market?.trend_4h ?? "sem dado"} />
+            <StatPill label="Tendência 1d" value={market?.trend_1d ?? "sem dado"} />
+            <StatPill label="Origem" value={sourceLabel(market?.source_payload)} />
+          </div>
+        </Panel>
 
-function PanelHeader({
-  eyebrow,
-  title,
-  icon,
-}: {
-  eyebrow: string;
-  title: string;
-  icon: ReactNode;
-}) {
-  return (
-    <div className="panelHeader">
-      <div>
-        <p className="eyebrow">{eyebrow}</p>
-        <h2>{title}</h2>
-      </div>
-      <span className="iconOrbit">{icon}</span>
-    </div>
-  );
-}
+        <Panel>
+          <PanelHeader eyebrow="Carteira" title="Saldo e posição" icon={<Wallet />} />
+          <CompactList>
+            <InfoRow label="USDT" value={formatMoney(portfolioSnapshot?.usdt_balance)} />
+            <InfoRow label="BTC" value={formatQuantity(portfolioSnapshot?.btc_balance)} />
+            <InfoRow label="Custo médio" value={formatMoney(portfolioSnapshot?.average_cost)} />
+            <InfoRow label="PnL não realizado" value={formatMoney(portfolioSnapshot?.unrealized_pnl)} />
+          </CompactList>
+        </Panel>
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="tableRow">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
+        <Panel>
+          <PanelHeader eyebrow="Decisões" title="Últimos ciclos" icon={<Bot />} />
+          <CompactList>
+            {decisions.length === 0 ? (
+              <EmptyState>Sem decisões registradas.</EmptyState>
+            ) : (
+              decisions.map((decision) => (
+                <div
+                  className="grid min-h-12 grid-cols-[130px_128px_minmax(0,1fr)_70px] items-center gap-3 border-b border-line pb-3 max-md:grid-cols-1"
+                  key={decision.id}
+                >
+                  <time className="text-[13px] text-muted">{formatDateTime(decision.decided_at)}</time>
+                  <strong className="text-[13px] text-link">{decision.decision}</strong>
+                  <span className="text-[13px] text-muted">{decision.reason}</span>
+                  <Link className="font-bold text-signal" href={`/decisions?decision=${decision.decision}`}>
+                    Abrir
+                  </Link>
+                </div>
+              ))
+            )}
+          </CompactList>
+        </Panel>
 
-function StatPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="riskItem">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
+        <Panel>
+          <PanelHeader eyebrow="Risco" title="Bloqueios e limites" icon={<ShieldCheck />} />
+          <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+            <StatPill label="Risco/trade" value={percentLabel(risk?.risk_per_trade_pct)} />
+            <StatPill label="Perda diária" value={percentLabel(risk?.daily_loss_limit_pct)} />
+            <StatPill label="Exposição máx." value={percentLabel(risk?.max_exposure_pct)} />
+            <StatPill label="Config" value={risk ? `v${risk.version}` : "sem config"} />
+          </div>
+        </Panel>
 
-function EmptyState({ text }: { text: string }) {
-  return <div className="emptyState">{text}</div>;
+        <Panel>
+          <PanelHeader eyebrow="Operações" title="Ordens e fills" icon={<Activity />} />
+          <CompactList>
+            <InfoRow label="Ordens recentes" value={String(orders.length)} />
+            <InfoRow label="Fills recentes" value={String(fills.length)} />
+            <InfoRow label="Última ordem" value={orders[0]?.status ?? "sem ordem"} />
+            <InfoRow label="Último fill" value={formatDateTime(fills[0]?.filled_at)} />
+          </CompactList>
+        </Panel>
+
+        <Panel>
+          <PanelHeader eyebrow="Estratégia" title="Config ativa" icon={<Settings2 />} />
+          <CompactList>
+            <InfoRow label="Nome" value={strategy?.name ?? "sem config"} />
+            <InfoRow label="Versão" value={strategy ? `v${strategy.version}` : "-"} />
+            <InfoRow label="Sinal" value={strategy?.signal_timeframe ?? "-"} />
+            <InfoRow label="Regime" value={strategy?.regime_timeframe_primary ?? "-"} />
+          </CompactList>
+        </Panel>
+      </section>
+    </AppShell>
+  );
 }
 
 function percentLabel(value: string | null | undefined) {

@@ -1,7 +1,17 @@
-import { ArrowLeft, Bot, Braces, Gauge, ListFilter } from "lucide-react";
-import Link from "next/link";
+import { ArrowLeft, Bot, Gauge, ListFilter } from "lucide-react";
 
-import { compactJson, fetchApi, formatDateTime, type DecisionsResponse } from "@/lib/api";
+import {
+  BackLink,
+  EmptyState,
+  Eyebrow,
+  FilterChip,
+  JsonBlock,
+  Notice,
+  PageHeader,
+  PagerLink,
+  StatusPill,
+} from "@/components/ui";
+import { fetchApi, formatDateTime, type DecisionsResponse } from "@/lib/api";
 
 const decisionFilters = ["COMPRA", "VENDA", "MANTER_POSICAO", "NAO_OPERAR"] as const;
 const pageSize = 20;
@@ -25,65 +35,61 @@ export default async function DecisionsPage({
   const symbol = result.ok ? result.data.symbol : "BTCUSDT";
 
   return (
-    <main className="detailShell">
-      <header className="detailHeader">
-        <Link className="backLink" href="/">
-          <ArrowLeft size={18} aria-hidden="true" />
-          Dashboard
-        </Link>
-        <div>
-          <p className="eyebrow">Auditoria {environment}</p>
-          <h1>Decisões do robô</h1>
-        </div>
-        <span className="statusPill">
-          <Bot size={16} aria-hidden="true" />
-          {symbol}
-        </span>
-      </header>
+    <main className="mx-auto grid min-h-screen max-w-[1220px] gap-6 p-6 max-md:p-4">
+      <PageHeader
+        leading={
+          <BackLink href="/" icon={<ArrowLeft size={18} aria-hidden="true" />}>
+            Dashboard
+          </BackLink>
+        }
+        eyebrow={`Auditoria ${environment}`}
+        title="Decisões do robô"
+        trailing={
+          <StatusPill>
+            <Bot size={16} aria-hidden="true" />
+            {symbol}
+          </StatusPill>
+        }
+      />
 
-      <section className="filterBand" aria-label="Filtros de decisão">
+      <section className="flex flex-wrap items-center gap-2.5" aria-label="Filtros de decisão">
         <ListFilter size={18} aria-hidden="true" />
-        <Link className={!decision ? "filterChip active" : "filterChip"} href="/decisions">
+        <FilterChip active={!decision} href="/decisions">
           Todas
-        </Link>
+        </FilterChip>
         {decisionFilters.map((item) => (
-          <Link
-            className={decision === item ? "filterChip active" : "filterChip"}
-            href={`/decisions?decision=${item}`}
-            key={item}
-          >
+          <FilterChip active={decision === item} href={`/decisions?decision=${item}`} key={item}>
             {item}
-          </Link>
+          </FilterChip>
         ))}
       </section>
 
-      {!result.ok ? (
-        <section className="noticePanel danger">
-          <span>API sem resposta: {result.error}</span>
-        </section>
-      ) : null}
+      {!result.ok ? <Notice tone="danger">API sem resposta: {result.error}</Notice> : null}
 
-      <section className="decisionAuditList">
+      <section className="grid gap-3">
         {decisions.length === 0 ? (
-          <div className="emptyState">Sem decisões para o filtro atual.</div>
+          <EmptyState>Sem decisões para o filtro atual.</EmptyState>
         ) : (
           decisions.map((item) => (
-            <article className="auditCard" key={item.id}>
-              <div className="auditSummary">
+            <article
+              className="grid gap-[18px] rounded-[40px] border border-ink/10 bg-surface p-6 shadow-soft"
+              key={item.id}
+            >
+              <div className="mb-0 flex items-start justify-between gap-4 max-md:flex-col">
                 <div>
-                  <p className="eyebrow">{formatDateTime(item.decided_at)}</p>
-                  <h2>{item.decision}</h2>
+                  <Eyebrow>{formatDateTime(item.decided_at)}</Eyebrow>
+                  <h2 className="m-0 text-2xl font-medium leading-tight tracking-[-0.02em]">{item.decision}</h2>
                 </div>
-                <span className="statusPill">{item.environment}</span>
+                <StatusPill>{item.environment}</StatusPill>
               </div>
-              <p className="reasonText">{item.reason}</p>
-              <div className="auditMeta">
+              <p className="m-0 text-lg leading-relaxed text-charcoal">{item.reason}</p>
+              <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
                 <MetaItem label="Bot run" value={shortId(item.bot_run_id)} />
                 <MetaItem label="Strategy" value={shortId(item.strategy_config_id)} />
                 <MetaItem label="Risk" value={shortId(item.risk_config_id)} />
                 <MetaItem label="Market" value={shortId(item.market_snapshot_id)} />
               </div>
-              <div className="jsonGrid">
+              <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
                 <JsonBlock label="Motivo" value={item.reason_payload} />
                 <JsonBlock label="Indicadores" value={item.indicators} />
                 <JsonBlock label="Ordem pretendida" value={item.intended_order} />
@@ -95,42 +101,27 @@ export default async function DecisionsPage({
         )}
       </section>
 
-      <footer className="pager">
-        <Link className={offset === 0 ? "pagerButton disabled" : "pagerButton"} href={pageHref(decision, offset - pageSize)}>
+      <footer className="flex items-center justify-between gap-2.5 max-md:flex-col">
+        <PagerLink disabled={offset === 0} href={pageHref(decision, offset - pageSize)}>
           Anterior
-        </Link>
-        <span>
+        </PagerLink>
+        <span className="inline-flex items-center gap-2 text-muted">
           <Gauge size={16} aria-hidden="true" />
           {offset + 1}-{offset + decisions.length}
         </span>
-        <Link
-          className={decisions.length < pageSize ? "pagerButton disabled" : "pagerButton"}
-          href={pageHref(decision, offset + pageSize)}
-        >
+        <PagerLink disabled={decisions.length < pageSize} href={pageHref(decision, offset + pageSize)}>
           Próxima
-        </Link>
+        </PagerLink>
       </footer>
     </main>
   );
 }
 
-function JsonBlock({ label, value }: { label: string; value: Record<string, unknown> }) {
-  return (
-    <section className="jsonBlock">
-      <h3>
-        <Braces size={14} aria-hidden="true" />
-        {label}
-      </h3>
-      <pre>{compactJson(value)}</pre>
-    </section>
-  );
-}
-
 function MetaItem({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <span>{label}</span>
-      <strong>{value}</strong>
+    <div className="grid gap-0.5 rounded-full bg-aurum-white px-4 py-3">
+      <span className="text-[13px] text-muted">{label}</span>
+      <strong className="text-[13px] font-bold">{value}</strong>
     </div>
   );
 }
