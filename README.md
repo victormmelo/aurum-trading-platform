@@ -69,6 +69,10 @@ npm run build
 npm run dev
 ```
 
+## Agent workflow
+
+Agents working on this repository should follow [AGENTS.md](AGENTS.md). The Slack Canvas is the central project documentation, Linear is the source of task execution state, and frontend work should align with the `npx getdesign@latest add mastercard` design direction.
+
 ## Safety assumptions
 
 - No real Binance credential belongs in this repository.
