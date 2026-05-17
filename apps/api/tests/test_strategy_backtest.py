@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from app.strategy.backtest import run_breakout_backtest
@@ -56,7 +56,7 @@ def _backtest_fixture() -> list[StrategyCandle]:
 
 
 def _candle(index: int, close: Decimal, *, volume: Decimal) -> StrategyCandle:
-    opened_at = datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(hours=index)
+    opened_at = datetime(2026, 1, 1, tzinfo=UTC) + timedelta(hours=index)
     return StrategyCandle(
         open_time=opened_at,
         close_time=opened_at + timedelta(hours=1),

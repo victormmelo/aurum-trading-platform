@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from app.market.binance import BinanceCandle
@@ -79,8 +79,8 @@ def _candle(interval: str) -> BinanceCandle:
     return BinanceCandle(
         symbol="BTCUSDT",
         interval=interval,
-        open_time=datetime(2024, 3, 9, 16, 0, tzinfo=timezone.utc),
-        close_time=datetime(2024, 3, 9, 16, 59, 59, 999000, tzinfo=timezone.utc),
+        open_time=datetime(2024, 3, 9, 16, 0, tzinfo=UTC),
+        close_time=datetime(2024, 3, 9, 16, 59, 59, 999000, tzinfo=UTC),
         open_price=Decimal("100"),
         high_price=Decimal("110"),
         low_price=Decimal("90"),

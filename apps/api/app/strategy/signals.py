@@ -5,6 +5,8 @@ from decimal import Decimal
 from app.strategy.types import IndicatorSnapshot, RegimeResult, SignalResult
 
 BUY = "COMPRA"
+SELL = "VENDA"
+HOLD = "MANTER_POSICAO"
 NO_TRADE = "NAO_OPERAR"
 
 

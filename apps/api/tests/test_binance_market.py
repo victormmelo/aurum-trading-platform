@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -32,8 +32,8 @@ def test_parse_kline_normalizes_binance_payload() -> None:
 
     assert candle.symbol == "BTCUSDT"
     assert candle.interval == "1h"
-    assert candle.open_time == datetime(2024, 3, 9, 16, 0, tzinfo=timezone.utc)
-    assert candle.close_time == datetime(2024, 3, 9, 16, 59, 59, 999000, tzinfo=timezone.utc)
+    assert candle.open_time == datetime(2024, 3, 9, 16, 0, tzinfo=UTC)
+    assert candle.close_time == datetime(2024, 3, 9, 16, 59, 59, 999000, tzinfo=UTC)
     assert candle.open_price == Decimal("100.10")
     assert candle.high_price == Decimal("110.20")
     assert candle.low_price == Decimal("99.90")

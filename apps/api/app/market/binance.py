@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -104,10 +104,10 @@ def parse_kline(symbol: str, interval: str, row: list[Any]) -> BinanceCandle:
 
 
 def _millis_to_datetime(value: int | str) -> datetime:
-    return datetime.fromtimestamp(int(value) / 1000, tz=timezone.utc)
+    return datetime.fromtimestamp(int(value) / 1000, tz=UTC)
 
 
 def _datetime_to_millis(value: datetime) -> int:
     if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
+        value = value.replace(tzinfo=UTC)
     return int(value.timestamp() * 1000)
