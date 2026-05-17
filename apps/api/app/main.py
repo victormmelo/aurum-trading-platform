@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api.routes.bot import router as bot_router
 from app.api.routes.health import router as health_router
 from app.core.config import get_settings
 
@@ -13,6 +14,7 @@ def create_app() -> FastAPI:
         redoc_url="/redoc" if settings.app_env != "production" else None,
     )
     app.include_router(health_router)
+    app.include_router(bot_router)
     return app
 
 

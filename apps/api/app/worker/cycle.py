@@ -123,7 +123,7 @@ class SqlAlchemyCycleStore:
             symbol=symbol,
             started_at=started_at,
             status="started",
-            run_payload={"mode": "dry_run"},
+            run_payload={"execution_mode": "dry_run"},
         )
         self.session.add(bot_run)
         self.session.flush()
@@ -297,6 +297,12 @@ def run_dry_run_cycle(
             decided_at=started_at,
         )
         runtime = decision_context.pop("runtime_state")
+        trading_mode = _trading_mode(runtime)
+        bot_run.run_payload = {
+            **(bot_run.run_payload or {}),
+            "execution_mode": "dry_run",
+            "trading_mode": trading_mode,
+        }
         strategy_config = decision_context.get("strategy_config")
         risk_config = decision_context.get("risk_config")
         if isinstance(strategy_config, StrategyConfigModel):
@@ -363,6 +369,7 @@ def _decide(
                 decision=NO_TRADE,
                 reason="Estado operacional do robô não encontrado",
                 reason_payload={"code": "missing_runtime_state"},
+                trading_mode=_trading_mode(runtime),
             ),
         }
 
@@ -373,6 +380,7 @@ def _decide(
                 decision=NO_TRADE,
                 reason="Robô pausado ou em parada de emergência",
                 reason_payload={"code": "bot_not_running", "bot_status": runtime.status},
+                trading_mode=_trading_mode(runtime),
             ),
         }
 
@@ -387,6 +395,7 @@ def _decide(
                     "has_strategy_config": strategy_config is not None,
                     "has_risk_config": risk_config is not None,
                 },
+                trading_mode=_trading_mode(runtime),
             ),
         }
 
@@ -429,6 +438,7 @@ def _decide(
         portfolio=portfolio,
         position=position,
         signal_snapshot=signal_snapshot,
+        trading_mode=_trading_mode(runtime),
     )
 
     return {
@@ -440,6 +450,7 @@ def _decide(
             indicators=indicators,
             intended_order=final["intended_order"],
             execution_result=final["execution_result"],
+            trading_mode=_trading_mode(runtime),
         ),
     }
 
@@ -471,6 +482,7 @@ def _apply_sizing_and_risk(
     portfolio: PortfolioSnapshot | None,
     position: Position | None,
     signal_snapshot: IndicatorSnapshot | None,
+    trading_mode: str,
 ) -> dict[str, object]:
     if candidate.decision == SELL:
         quantity = position.quantity if position is not None else Decimal("0")
@@ -479,11 +491,13 @@ def _apply_sizing_and_risk(
             reason=candidate.reason,
             reason_payload=candidate.reason_payload,
             intended_order={
-                "mode": "dry_run",
+                "execution_mode": "dry_run",
+                "trading_mode": trading_mode,
                 "side": "SELL",
                 "type": "MARKET",
                 "quantity": str(quantity),
             },
+            trading_mode=trading_mode,
         )
 
     if candidate.decision != BUY:
@@ -491,6 +505,7 @@ def _apply_sizing_and_risk(
             decision=candidate.decision,
             reason=candidate.reason,
             reason_payload=candidate.reason_payload,
+            trading_mode=trading_mode,
         )
 
     if portfolio is None:
@@ -498,6 +513,7 @@ def _apply_sizing_and_risk(
             decision=NO_TRADE,
             reason="Snapshot de carteira ausente para sizing e risco",
             reason_payload={"code": "missing_portfolio_snapshot", **candidate.reason_payload},
+            trading_mode=trading_mode,
         )
 
     risk_config = _to_strategy_risk_config(risk_config_model)
@@ -518,6 +534,7 @@ def _apply_sizing_and_risk(
             decision=NO_TRADE,
             reason=sizing.reason,
             reason_payload=sizing.reason_payload,
+            trading_mode=trading_mode,
         )
 
     risk = evaluate_risk(
@@ -532,13 +549,15 @@ def _apply_sizing_and_risk(
         risk_config,
     )
     if not risk.allowed:
-        return _final_from_risk(risk)
+        return _final_from_risk(risk, trading_mode=trading_mode)
 
     return _final_from_risk(
         risk,
+        trading_mode=trading_mode,
         sizing=sizing,
         intended_order={
-            "mode": "dry_run",
+            "execution_mode": "dry_run",
+            "trading_mode": trading_mode,
             "side": "BUY",
             "type": "MARKET",
             "quantity": str(sizing.quantity),
@@ -550,6 +569,7 @@ def _apply_sizing_and_risk(
 def _final_from_risk(
     risk: RiskResult,
     *,
+    trading_mode: str,
     sizing: PositionSizingResult | None = None,
     intended_order: dict[str, object] | None = None,
 ) -> dict[str, object]:
@@ -562,6 +582,7 @@ def _final_from_risk(
         reason=risk.reason,
         reason_payload=reason_payload,
         intended_order=intended_order,
+        trading_mode=trading_mode,
     )
 
 
@@ -571,6 +592,7 @@ def _final(
     reason: str,
     reason_payload: dict[str, object],
     intended_order: dict[str, object] | None = None,
+    trading_mode: str,
 ) -> dict[str, object]:
     return {
         "decision": decision,
@@ -578,7 +600,8 @@ def _final(
         "reason_payload": reason_payload,
         "intended_order": intended_order or {},
         "execution_result": {
-            "mode": "dry_run",
+            "execution_mode": "dry_run",
+            "trading_mode": trading_mode,
             "status": "not_sent",
             "reason": "order_execution_out_of_scope",
         },
@@ -593,6 +616,7 @@ def _decision_payload(
     indicators: dict[str, object] | None = None,
     intended_order: dict[str, object] | None = None,
     execution_result: dict[str, object] | None = None,
+    trading_mode: str,
 ) -> dict[str, object]:
     return {
         "decision": decision,
@@ -602,11 +626,18 @@ def _decision_payload(
         "intended_order": intended_order or {},
         "execution_result": execution_result
         or {
-            "mode": "dry_run",
+            "execution_mode": "dry_run",
+            "trading_mode": trading_mode,
             "status": "not_sent",
             "reason": "no_order_intended",
         },
     }
+
+
+def _trading_mode(runtime: object) -> str:
+    if isinstance(runtime, BotRuntimeState) and runtime.trading_mode:
+        return runtime.trading_mode
+    return "unknown"
 
 
 def _to_strategy_risk_config(config: RiskConfigModel) -> RiskConfig:

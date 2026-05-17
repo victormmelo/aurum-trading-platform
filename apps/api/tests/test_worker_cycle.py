@@ -29,7 +29,9 @@ NOW = datetime(2026, 5, 17, 19, 0, tzinfo=UTC)
 
 
 def test_worker_cycle_records_no_trade_when_bot_is_paused() -> None:
-    store = FakeStore(runtime=BotRuntimeState(environment="testnet", status="paused"))
+    store = FakeStore(
+        runtime=BotRuntimeState(environment="testnet", status="paused", trading_mode="paper")
+    )
 
     result = run_dry_run_cycle(store, environment="testnet", symbol="BTCUSDT", now=NOW)
 
@@ -38,7 +40,33 @@ def test_worker_cycle_records_no_trade_when_bot_is_paused() -> None:
     assert len(store.runs) == 1
     assert len(store.decisions) == 1
     assert store.decisions[0].reason_payload["code"] == "bot_not_running"
+    assert store.decisions[0].execution_result["execution_mode"] == "dry_run"
+    assert store.decisions[0].execution_result["trading_mode"] == "paper"
+    assert store.runs[0].run_payload == {
+        "execution_mode": "dry_run",
+        "trading_mode": "paper",
+    }
     assert store.commits == 1
+
+
+def test_worker_cycle_records_no_trade_when_bot_is_in_emergency_stop() -> None:
+    store = FakeStore(
+        runtime=BotRuntimeState(
+            environment="testnet",
+            status="emergency_stop",
+            trading_mode="testnet",
+        )
+    )
+
+    result = run_dry_run_cycle(store, environment="testnet", symbol="BTCUSDT", now=NOW)
+
+    assert result.status == "completed"
+    assert result.decision == "NAO_OPERAR"
+    assert store.decisions[0].reason_payload == {
+        "code": "bot_not_running",
+        "bot_status": "emergency_stop",
+    }
+    assert store.decisions[0].execution_result["trading_mode"] == "testnet"
 
 
 def test_worker_cycle_records_no_trade_without_active_configs() -> None:
@@ -57,7 +85,11 @@ def test_worker_cycle_records_no_trade_without_active_configs() -> None:
 
 def test_worker_cycle_persists_buy_decision_in_dry_run(monkeypatch) -> None:  # noqa: ANN001
     store = FakeStore(
-        runtime=BotRuntimeState(environment="testnet", status="running"),
+        runtime=BotRuntimeState(
+            environment="testnet",
+            status="running",
+            trading_mode="testnet",
+        ),
         strategy_config=_strategy_config(),
         risk_config=_risk_config(),
         portfolio=_portfolio_snapshot(),
@@ -111,13 +143,20 @@ def test_worker_cycle_persists_buy_decision_in_dry_run(monkeypatch) -> None:  # 
     decision = store.decisions[0]
     assert decision.indicators["signal"]["rsi"] == "60"
     assert decision.intended_order == {
-        "mode": "dry_run",
+        "execution_mode": "dry_run",
+        "trading_mode": "testnet",
         "side": "BUY",
         "type": "MARKET",
         "quantity": "0.05",
         "quote_quantity": "500",
     }
+    assert store.runs[0].run_payload == {
+        "execution_mode": "dry_run",
+        "trading_mode": "testnet",
+    }
     assert decision.execution_result["status"] == "not_sent"
+    assert decision.execution_result["execution_mode"] == "dry_run"
+    assert decision.execution_result["trading_mode"] == "testnet"
     assert decision.market_snapshot_id == store.market_snapshots[0].id
 
 
