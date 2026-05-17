@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
@@ -25,6 +25,72 @@ class BotStatusResponse(BaseModel):
 
 class BotCommandRequest(BaseModel):
     reason: str | None = None
+
+
+class StrategyConfigCreateRequest(BaseModel):
+    version: int = Field(ge=1)
+    name: str = "breakout_trend_v1"
+    signal_timeframe: str = "1h"
+    regime_timeframe_primary: str = "4h"
+    regime_timeframe_secondary: str = "1d"
+    parameters: dict = Field(default_factory=dict)
+    created_by: str | None = "system"
+
+
+class StrategyConfigResponse(BaseModel):
+    id: UUID
+    environment: str
+    version: int
+    name: str
+    symbol: str
+    signal_timeframe: str
+    regime_timeframe_primary: str
+    regime_timeframe_secondary: str
+    parameters: dict
+    is_active: bool
+    created_by: str | None
+    activated_at: datetime | None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class StrategyConfigsResponse(BaseModel):
+    environment: str
+    symbol: str
+    configs: list[StrategyConfigResponse]
+
+
+class RiskConfigCreateRequest(BaseModel):
+    version: int = Field(ge=1)
+    name: str = "mvp_risk_v1"
+    risk_per_trade_pct: Decimal | None = None
+    daily_loss_limit_pct: Decimal | None = None
+    max_exposure_pct: Decimal | None = None
+    parameters: dict = Field(default_factory=dict)
+    created_by: str | None = "system"
+
+
+class RiskConfigResponse(BaseModel):
+    id: UUID
+    environment: str
+    version: int
+    name: str
+    symbol: str
+    risk_per_trade_pct: Decimal | None
+    daily_loss_limit_pct: Decimal | None
+    max_exposure_pct: Decimal | None
+    parameters: dict
+    is_active: bool
+    created_by: str | None
+    activated_at: datetime | None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class RiskConfigsResponse(BaseModel):
+    environment: str
+    symbol: str
+    configs: list[RiskConfigResponse]
 
 
 class MarketSnapshotSummary(BaseModel):
