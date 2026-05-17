@@ -59,6 +59,12 @@ pytest
 uvicorn app.main:app --reload
 ```
 
+Import initial BTCUSDT candles after PostgreSQL migrations are applied:
+
+```bash
+aurum-import-candles --interval 1h --interval 4h --interval 1d --limit 500
+```
+
 Frontend:
 
 ```bash
