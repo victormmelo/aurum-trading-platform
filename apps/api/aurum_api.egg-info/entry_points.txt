@@ -1,0 +1,2 @@
+[console_scripts]
+aurum-import-candles = app.market.import_candles:main
