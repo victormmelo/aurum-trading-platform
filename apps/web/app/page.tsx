@@ -119,11 +119,11 @@ export default async function DashboardPage() {
           <div className="grid gap-5" aria-label="Indicadores de mercado">
             <div className="flex items-start justify-between gap-5 max-md:flex-col">
               <div className="min-w-0">
-                <span className="text-sm leading-[1.43] tracking-[-0.224px] text-muted">Último preço</span>
+                <span className="text-sm leading-[1.43] tracking-[-0.224px] text-ink-muted-48">Último preço</span>
                 <strong className="mt-2 block break-words font-display text-[40px] font-semibold leading-[1.08] tracking-[-0.28px] md:text-[56px]">
                   {marketPrice === "-" ? "Sem preço" : marketPrice}
                 </strong>
-                <p className="m-0 mt-3 max-w-[520px] text-[17px] leading-[1.47] tracking-[-0.374px] text-muted">
+                <p className="m-0 mt-3 max-w-[520px] text-[17px] leading-[1.47] tracking-[-0.374px] text-ink-muted-48">
                   Snapshot de mercado capturado em {formatDateTime(market?.captured_at)}.
                 </p>
               </div>
@@ -179,12 +179,12 @@ export default async function DashboardPage() {
             ) : (
               decisions.slice(0, 4).map((decision) => (
                 <div
-                  className="grid min-h-12 grid-cols-[128px_126px_minmax(0,1fr)_54px] items-center gap-3 border-b border-line pb-3 max-md:grid-cols-1"
+                  className="grid min-h-12 grid-cols-[128px_126px_minmax(0,1fr)_54px] items-center gap-3 border-b border-hairline pb-3 max-md:grid-cols-1"
                   key={decision.id}
                 >
-                  <time className="text-[13px] leading-[1.43] tracking-[-0.224px] text-muted">{formatDateTime(decision.decided_at)}</time>
+                  <time className="text-[13px] leading-[1.43] tracking-[-0.224px] text-ink-muted-48">{formatDateTime(decision.decided_at)}</time>
                   <strong className="text-[13px] font-semibold leading-[1.29] tracking-[-0.224px] text-primary">{decision.decision}</strong>
-                  <span className="text-[13px] leading-[1.43] tracking-[-0.224px] text-muted">{shortText(decision.reason)}</span>
+                  <span className="text-[13px] leading-[1.43] tracking-[-0.224px] text-ink-muted-48">{shortText(decision.reason)}</span>
                   <Link className="text-[13px] font-semibold text-primary" href={`/decisions?decision=${decision.decision}`}>
                     Abrir
                   </Link>

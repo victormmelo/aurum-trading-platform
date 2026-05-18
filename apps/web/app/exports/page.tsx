@@ -28,8 +28,8 @@ export default async function ExportsPage({ searchParams }: { searchParams?: Pro
           <PanelHeader eyebrow="Nova exportação" title="Escopo e formato" icon={<FileDown />} />
           <form action={createExport} className="grid gap-3.5">
             <label className="grid gap-[7px]">
-              <span className="text-[13px] text-muted">Formato</span>
-              <select className="min-h-11 rounded-[14px] border border-line bg-canvas px-3.5" name="format" defaultValue="txt">
+              <span className="text-[13px] text-ink-muted-48">Formato</span>
+              <select className="min-h-11 rounded-[14px] border border-hairline bg-canvas px-3.5" name="format" defaultValue="txt">
                 <option value="txt">TXT</option>
                 <option value="csv">CSV</option>
                 <option value="pdf">PDF</option>
@@ -37,7 +37,7 @@ export default async function ExportsPage({ searchParams }: { searchParams?: Pro
             </label>
             <div className="grid grid-cols-2 gap-2 max-md:grid-cols-1">
               {["market", "portfolio", "operations", "decisions"].map((section) => (
-                <label className="flex min-h-11 items-center gap-2 rounded-[14px] border border-line bg-canvas px-3.5 text-sm" key={section}>
+                <label className="flex min-h-11 items-center gap-2 rounded-[14px] border border-hairline bg-canvas px-3.5 text-sm" key={section}>
                   <input name="sections" type="checkbox" value={section} defaultChecked />
                   {section}
                 </label>
@@ -57,10 +57,10 @@ export default async function ExportsPage({ searchParams }: { searchParams?: Pro
               <InfoRow label="Status" value={job.status} />
               <InfoRow label="Criada" value={formatDateTime(job.created_at)} />
               <InfoRow label="Seções" value={job.sections.join(", ")} />
-              <pre className="m-0 max-h-[420px] overflow-auto whitespace-pre-wrap break-words rounded-[28px] bg-ink p-4 font-mono text-xs leading-relaxed text-canvas">{job.content}</pre>
+              <pre className="m-0 max-h-[420px] overflow-auto whitespace-pre-wrap break-words rounded-[28px] bg-ink p-4 font-mono text-xs leading-relaxed text-on-primary">{job.content}</pre>
             </CompactList>
           ) : (
-            <p className="m-0 text-muted">Gere uma exportação para visualizar o conteúdo retornado pela API.</p>
+            <p className="m-0 text-ink-muted-48">Gere uma exportação para visualizar o conteúdo retornado pela API.</p>
           )}
         </Panel>
       </section>

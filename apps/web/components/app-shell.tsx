@@ -13,8 +13,8 @@ export function AppShell({
   children: ReactNode;
 }) {
   return (
-    <main className="min-h-screen bg-parchment text-ink lg:grid lg:grid-cols-[232px_minmax(0,1fr)]">
-      <aside className="border-r border-line bg-parchment/90 px-4 py-4 backdrop-blur max-lg:border-b">
+    <main className="min-h-screen bg-canvas-parchment text-ink lg:grid lg:grid-cols-[232px_minmax(0,1fr)]">
+      <aside className="border-r border-hairline bg-canvas-parchment/90 px-4 py-4 backdrop-blur max-lg:border-b">
         <div className="grid gap-5 lg:sticky lg:top-4">
           <AurumBrand />
           <nav
@@ -25,8 +25,8 @@ export function AppShell({
               <Link
                 aria-disabled={disabled ? "true" : undefined}
                 className={cx(
-                  "flex min-h-11 items-center gap-3 rounded-[11px] border border-transparent px-3.5 text-sm font-normal tracking-[-0.224px] text-muted transition-colors",
-                  label === activeLabel && "border-line bg-canvas text-ink",
+                  "flex min-h-11 items-center gap-3 rounded-[11px] border border-transparent px-3.5 text-sm font-normal tracking-[-0.224px] text-ink-muted-48 transition-colors",
+                  label === activeLabel && "border-hairline bg-canvas text-ink",
                   disabled && "pointer-events-none opacity-45",
                   !disabled && label !== activeLabel && "hover:bg-canvas/70 hover:text-ink",
                 )}
@@ -50,13 +50,13 @@ export function AppShell({
 
 function AurumBrand() {
   return (
-    <div className="flex min-h-[56px] items-center gap-3 border-b border-line pb-4">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ink text-[17px] font-semibold text-canvas">
+    <div className="flex min-h-[56px] items-center gap-3 border-b border-hairline pb-4">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ink text-[17px] font-semibold text-on-primary">
         A
       </div>
       <div>
         <strong className="block text-[17px] font-semibold leading-tight tracking-[-0.34px]">Aurum</strong>
-        <span className="mt-0.5 block text-xs leading-none tracking-[-0.12px] text-muted">BTC Testnet</span>
+        <span className="mt-0.5 block text-xs leading-none tracking-[-0.12px] text-ink-muted-48">BTC Testnet</span>
       </div>
     </div>
   );

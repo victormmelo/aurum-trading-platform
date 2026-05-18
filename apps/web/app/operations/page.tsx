@@ -24,7 +24,7 @@ export default async function OperationsPage() {
           <PanelHeader eyebrow="Ordens" title="Histórico recente" icon={<Activity />} />
           <CompactList>
             {orders.length === 0 ? <EmptyState>Sem ordens registradas.</EmptyState> : orders.map((order) => (
-              <article className="grid gap-3 rounded-[18px] border border-line bg-canvas p-4" key={order.id}>
+              <article className="grid gap-3 rounded-[18px] border border-hairline bg-canvas p-4" key={order.id}>
                 <div className="flex items-center justify-between gap-3">
                   <strong>{order.side}</strong>
                   <StatusPill>{order.status}</StatusPill>
@@ -40,7 +40,7 @@ export default async function OperationsPage() {
           <PanelHeader eyebrow="Fills" title="Execuções" icon={<Activity />} />
           <CompactList>
             {fills.length === 0 ? <EmptyState>Sem fills registrados.</EmptyState> : fills.map((fill) => (
-              <article className="grid gap-3 rounded-[18px] border border-line bg-canvas p-4" key={fill.id}>
+              <article className="grid gap-3 rounded-[18px] border border-hairline bg-canvas p-4" key={fill.id}>
                 <InfoRow label="Horário" value={formatDateTime(fill.filled_at)} />
                 <InfoRow label="Preço" value={formatMoney(fill.price)} />
                 <InfoRow label="Quantidade" value={formatQuantity(fill.quantity)} />

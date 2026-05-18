@@ -69,7 +69,7 @@ export default async function DecisionsPage({
         ) : (
           decisions.map((item) => (
             <article
-              className="grid gap-[18px] rounded-[18px] border border-line bg-canvas p-5"
+              className="grid gap-[18px] rounded-[18px] border border-hairline bg-canvas p-5"
               key={item.id}
             >
               <div className="mb-0 flex items-start justify-between gap-4 max-md:flex-col">
@@ -79,7 +79,7 @@ export default async function DecisionsPage({
                 </div>
                 <StatusPill>{item.environment}</StatusPill>
               </div>
-              <p className="m-0 text-lg leading-relaxed text-charcoal">{item.reason}</p>
+              <p className="m-0 text-lg leading-relaxed text-ink-muted-80">{item.reason}</p>
               <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
                 <MetaItem label="Bot run" value={shortId(item.bot_run_id)} />
                 <MetaItem label="Strategy" value={shortId(item.strategy_config_id)} />
@@ -102,7 +102,7 @@ export default async function DecisionsPage({
         <PagerLink disabled={offset === 0} href={pageHref(decision, offset - pageSize)}>
           Anterior
         </PagerLink>
-        <span className="inline-flex items-center gap-2 text-muted">
+        <span className="inline-flex items-center gap-2 text-ink-muted-48">
           <Gauge size={16} aria-hidden="true" />
           {offset + 1}-{offset + decisions.length}
         </span>
@@ -117,7 +117,7 @@ export default async function DecisionsPage({
 function MetaItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-0.5 rounded-full bg-canvas px-4 py-3">
-      <span className="text-[13px] text-muted">{label}</span>
+      <span className="text-[13px] text-ink-muted-48">{label}</span>
       <strong className="text-[13px] font-bold">{value}</strong>
     </div>
   );
