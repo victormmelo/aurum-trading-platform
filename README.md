@@ -73,6 +73,19 @@ cd apps/api
 python ../../services/worker/main.py
 ```
 
+Collect Testnet validation evidence without mutating service state:
+
+```bash
+API_URL=http://localhost:8000 ./scripts/collect-testnet-evidence.sh
+```
+
+Use [docs/runbooks/testnet-validation-checklist.md](docs/runbooks/testnet-validation-checklist.md)
+as the operational checklist before any higher-risk Testnet validation step.
+Use [docs/runbooks/mainnet-readiness-checklist.md](docs/runbooks/mainnet-readiness-checklist.md)
+as the mandatory hardening checklist before any future Mainnet promotion. That
+checklist does not authorize Mainnet by itself; a dedicated Linear issue and
+Slack Canvas decision are still required.
+
 Frontend:
 
 ```bash
