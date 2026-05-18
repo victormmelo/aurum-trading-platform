@@ -285,3 +285,81 @@ class ExportJobResponse(BaseModel):
     completed_at: datetime
     filters: dict
     content: str
+
+
+McpScope = Literal[
+    "read:market",
+    "read:portfolio",
+    "read:trades",
+    "read:decisions",
+    "read:config",
+    "read:reports",
+]
+
+
+class McpTokenCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    agent_name: str | None = Field(default=None, max_length=120)
+    scopes: list[McpScope] = Field(min_length=1)
+    expires_at: datetime | None = None
+
+
+class McpTokenResponse(BaseModel):
+    id: UUID
+    environment: str
+    name: str
+    agent_name: str | None
+    scopes: list[McpScope]
+    status: str
+    expires_at: datetime | None
+    revoked_at: datetime | None
+    last_used_at: datetime | None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class McpTokenCreateResponse(McpTokenResponse):
+    token: str
+
+
+class McpTokensResponse(BaseModel):
+    environment: str
+    tokens: list[McpTokenResponse]
+
+
+class McpTokenValidateRequest(BaseModel):
+    required_scopes: list[McpScope] = Field(min_length=1)
+    resource: str = Field(min_length=1, max_length=120)
+
+
+class McpTokenValidateResponse(BaseModel):
+    token_id: UUID
+    environment: str
+    agent_name: str | None
+    scopes: list[McpScope]
+
+
+class McpAccessLogCreateRequest(BaseModel):
+    token_id: UUID | None = None
+    agent_name: str | None = Field(default=None, max_length=120)
+    resource: str = Field(min_length=1, max_length=120)
+    arguments: dict = Field(default_factory=dict)
+    status: Literal["success", "error", "blocked"]
+    status_code: int | None = None
+    error_message: str | None = None
+    latency_ms: int | None = Field(default=None, ge=0)
+
+
+class McpAccessLogResponse(BaseModel):
+    id: UUID
+    environment: str
+    token_id: UUID | None
+    agent_name: str | None
+    resource: str
+    arguments: dict
+    status: str
+    status_code: int | None
+    error_message: str | None
+    latency_ms: int | None
+    occurred_at: datetime
+    created_at: datetime | None = None

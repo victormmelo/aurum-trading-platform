@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -55,6 +56,37 @@ class AurumApiClient:
         if not payload:
             return {}
         loaded = json.loads(payload)
+        return loaded if isinstance(loaded, dict) else {"data": loaded}
+
+    def post(
+        self,
+        path: str,
+        payload: JsonObject,
+        *,
+        bearer_token: str | None = None,
+    ) -> JsonObject:
+        body = json.dumps(payload).encode("utf-8")
+        request = Request(f"{self.base_url}{path}", data=body, method="POST")
+        request.add_header("Accept", "application/json")
+        request.add_header("Content-Type", "application/json")
+        token = bearer_token or self.bearer_token
+        if token:
+            request.add_header("Authorization", f"Bearer {token}")
+
+        try:
+            with urlopen(request, timeout=10) as response:  # noqa: S310
+                response_payload = response.read().decode("utf-8")
+        except HTTPError as exc:
+            body = exc.read().decode("utf-8")
+            raise AurumApiError(
+                f"Aurum API returned HTTP {exc.code}: {body}", status_code=exc.code
+            ) from exc
+        except URLError as exc:
+            raise AurumApiError(f"Aurum API request failed: {exc.reason}") from exc
+
+        if not response_payload:
+            return {}
+        loaded = json.loads(response_payload)
         return loaded if isinstance(loaded, dict) else {"data": loaded}
 
 
@@ -133,8 +165,16 @@ def build_tools() -> list[ToolDefinition]:
 
 
 class AurumMcpServer:
-    def __init__(self, api_client: AurumApiClient) -> None:
+    def __init__(
+        self,
+        api_client: AurumApiClient,
+        *,
+        mcp_bearer_token: str | None = None,
+        auth_required: bool = False,
+    ) -> None:
         self.api_client = api_client
+        self.mcp_bearer_token = mcp_bearer_token
+        self.auth_required = auth_required
         self.tools = {tool.name: tool for tool in build_tools()}
 
     def handle(self, message: JsonObject) -> JsonObject | None:
@@ -185,16 +225,32 @@ class AurumMcpServer:
         if not isinstance(arguments, dict):
             raise ValueError("Tool arguments must be an object")
 
-        handlers = {
-            "get_market_summary": self.get_market_summary,
-            "get_portfolio_status": self.get_portfolio_status,
-            "get_trade_history": self.get_trade_history,
-            "get_decision_log": self.get_decision_log,
-            "get_risk_status": self.get_risk_status,
-            "get_strategy_config": self.get_strategy_config,
-            "explain_last_decision": self.explain_last_decision,
-        }
-        payload = handlers[name](arguments)
+        started_at = time.monotonic()
+        auth_context: JsonObject = {}
+        try:
+            auth_context = self._validate_tool_access(str(name))
+            payload = self._call_tool_payload(str(name), arguments)
+            self._record_access(
+                name=str(name),
+                arguments=arguments,
+                auth_context=auth_context,
+                status="success",
+                status_code=200,
+                error_message=None,
+                latency_ms=_latency_ms(started_at),
+            )
+        except Exception as exc:
+            self._record_access(
+                name=str(name),
+                arguments=arguments,
+                auth_context=auth_context,
+                status="error",
+                status_code=getattr(exc, "status_code", None),
+                error_message=str(exc),
+                latency_ms=_latency_ms(started_at),
+            )
+            raise
+
         return {
             "content": [
                 {
@@ -204,6 +260,64 @@ class AurumMcpServer:
             ],
             "structuredContent": payload,
         }
+
+    def _validate_tool_access(self, name: str) -> JsonObject:
+        if not self.auth_required:
+            return {}
+        if not self.mcp_bearer_token:
+            raise AurumApiError("AURUM_MCP_BEARER_TOKEN is required when MCP auth is enabled")
+
+        return self.api_client.post(
+            "/mcp/auth/validate",
+            {
+                "resource": name,
+                "required_scopes": TOOL_SCOPES[name],
+            },
+            bearer_token=self.mcp_bearer_token,
+        )
+
+    def _record_access(
+        self,
+        *,
+        name: str,
+        arguments: JsonObject,
+        auth_context: JsonObject,
+        status: str,
+        status_code: int | None,
+        error_message: str | None,
+        latency_ms: int,
+    ) -> None:
+        if not self.auth_required:
+            return
+        try:
+            self.api_client.post(
+                "/mcp/audit-log",
+                {
+                    "token_id": auth_context.get("token_id"),
+                    "agent_name": auth_context.get("agent_name"),
+                    "resource": name,
+                    "arguments": _redact_arguments(arguments),
+                    "status": status,
+                    "status_code": status_code,
+                    "error_message": error_message,
+                    "latency_ms": latency_ms,
+                },
+            )
+        except AurumApiError:
+            # The tool result should not be hidden by a secondary audit transport failure.
+            return
+
+    def _call_tool_payload(self, name: str, arguments: JsonObject) -> JsonObject:
+        handlers = {
+            "get_market_summary": self.get_market_summary,
+            "get_portfolio_status": self.get_portfolio_status,
+            "get_trade_history": self.get_trade_history,
+            "get_decision_log": self.get_decision_log,
+            "get_risk_status": self.get_risk_status,
+            "get_strategy_config": self.get_strategy_config,
+            "explain_last_decision": self.explain_last_decision,
+        }
+        return handlers[name](arguments)
 
     def get_market_summary(self, arguments: JsonObject) -> JsonObject:
         _reject_unknown(arguments, set())
@@ -305,11 +419,18 @@ def run_stdio_server(server: AurumMcpServer) -> None:
 
 
 def create_server_from_env() -> AurumMcpServer:
+    auth_required = _env_bool("AURUM_MCP_AUTH_ENABLED", default=True)
+    mcp_bearer_token = os.getenv("AURUM_MCP_BEARER_TOKEN")
+    if auth_required and not mcp_bearer_token:
+        raise RuntimeError("AURUM_MCP_BEARER_TOKEN is required when MCP auth is enabled")
+
     return AurumMcpServer(
         AurumApiClient(
             base_url=os.getenv("AURUM_API_BASE_URL", DEFAULT_API_BASE_URL),
             bearer_token=os.getenv("AURUM_API_BEARER_TOKEN"),
-        )
+        ),
+        mcp_bearer_token=mcp_bearer_token,
+        auth_required=auth_required,
     )
 
 
@@ -377,6 +498,32 @@ def _decision_summary(decision: JsonObject) -> str:
     execution_status = execution.get("status", "unknown")
     reason_text = str(reason).rstrip(".")
     return f"{decision_value}: {reason_text}. Execution status: {execution_status}."
+
+
+TOOL_SCOPES: dict[str, list[str]] = {
+    "get_market_summary": ["read:market"],
+    "get_portfolio_status": ["read:portfolio"],
+    "get_trade_history": ["read:trades"],
+    "get_decision_log": ["read:decisions"],
+    "get_risk_status": ["read:portfolio", "read:config"],
+    "get_strategy_config": ["read:config"],
+    "explain_last_decision": ["read:decisions"],
+}
+
+
+def _latency_ms(started_at: float) -> int:
+    return max(0, int((time.monotonic() - started_at) * 1000))
+
+
+def _redact_arguments(arguments: JsonObject) -> JsonObject:
+    return {key: value for key, value in arguments.items() if "token" not in key.lower()}
+
+
+def _env_bool(name: str, *, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.lower() in {"1", "true", "yes", "on"}
 
 
 if __name__ == "__main__":

@@ -12,6 +12,8 @@ def test_operational_schema_tables_are_registered() -> None:
         "decision_logs",
         "market_candles",
         "market_snapshots",
+        "mcp_access_logs",
+        "mcp_tokens",
         "order_fills",
         "orders",
         "portfolio_snapshots",
@@ -21,6 +23,15 @@ def test_operational_schema_tables_are_registered() -> None:
     }
 
     assert set(Base.metadata.tables) == expected_tables
+
+
+def test_mcp_token_schema_stores_only_token_hash_and_read_only_scopes() -> None:
+    mcp_tokens = Base.metadata.tables["mcp_tokens"]
+
+    assert "token_hash" in mcp_tokens.columns
+    assert "token" not in mcp_tokens.columns
+    assert "secret" not in mcp_tokens.columns
+    assert "scopes" in mcp_tokens.columns
 
 
 def test_decision_log_accepts_only_mvp_decisions() -> None:

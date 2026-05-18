@@ -411,3 +411,52 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class McpToken(TimestampMixin, Base):
+    __tablename__ = "mcp_tokens"
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_mcp_tokens_token_hash"),
+        CheckConstraint(
+            "status in ('active', 'revoked', 'expired')",
+            name="mcp_tokens_status",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID_PK, primary_key=True, default=uuid.uuid4)
+    environment: Mapped[str] = mapped_column(String(32), nullable=False, default="testnet")
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    agent_name: Mapped[str | None] = mapped_column(String(120))
+    token_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    scopes: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'[]'::jsonb")
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class McpAccessLog(Base):
+    __tablename__ = "mcp_access_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID_PK, primary_key=True, default=uuid.uuid4)
+    environment: Mapped[str] = mapped_column(String(32), nullable=False, default="testnet")
+    token_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID_PK, ForeignKey("mcp_tokens.id", ondelete="SET NULL")
+    )
+    agent_name: Mapped[str | None] = mapped_column(String(120))
+    resource: Mapped[str] = mapped_column(String(120), nullable=False)
+    arguments: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    status_code: Mapped[int | None] = mapped_column(Integer)
+    error_message: Mapped[str | None] = mapped_column(Text)
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    token: Mapped[McpToken | None] = relationship()
