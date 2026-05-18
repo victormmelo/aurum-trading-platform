@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-aurum}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aurum_dev_password}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -18,7 +18,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -38,7 +38,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://aurum:aurum_dev_password@postgres:5432/aurum}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,7 +61,7 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV:-development}
     ports:
-      - "3000:3000"
+      - "${WEB_PORT:-3000}:3000"
     depends_on:
       api:
         condition: service_healthy
