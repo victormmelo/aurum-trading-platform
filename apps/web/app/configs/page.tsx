@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   CheckCircle2,
   CircleAlert,
   CirclePlay,
@@ -16,8 +15,9 @@ import {
   createRiskConfig,
   createStrategyConfig,
 } from "@/app/configs/actions";
+import { navItems } from "@/app/nav";
+import { AppShell } from "@/components/app-shell";
 import {
-  BackLink,
   CompactList,
   EmptyState,
   IconTextButton,
@@ -68,15 +68,11 @@ export default async function ConfigsPage({
     "BTCUSDT";
 
   return (
-    <main className="mx-auto grid min-h-screen max-w-[1220px] gap-6 p-6 max-md:p-4">
+    <AppShell navItems={navItems} activeLabel="Estratégias">
       <PageHeader
-        leading={
-          <BackLink href="/" icon={<ArrowLeft size={18} aria-hidden="true" />}>
-            Dashboard
-          </BackLink>
-        }
         eyebrow={`Configurações ${environment}`}
         title="Estratégia e risco"
+        description="Versões autorizadas de estratégia e risco, sempre aplicadas de forma versionada e auditável."
         trailing={
           <StatusPill>
             <ShieldCheck size={16} aria-hidden="true" />
@@ -206,7 +202,7 @@ export default async function ConfigsPage({
           </form>
         </ConfigPanel>
       </section>
-    </main>
+    </AppShell>
   );
 }
 

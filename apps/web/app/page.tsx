@@ -60,6 +60,7 @@ export default async function DashboardPage() {
       <PageHeader
         eyebrow={`Ambiente ${bot?.environment ?? appEnv}`}
         title="Dashboard operacional"
+        description="Visão de controle do robô BTCUSDT em Testnet: saúde da API, ciclo atual, mercado, carteira, risco e auditoria recente."
         trailing={
           <StatusCluster>
             <StatusPill tone={apiHealthy ? "positive" : "danger"}>
@@ -84,12 +85,12 @@ export default async function DashboardPage() {
         </Notice>
       ) : null}
 
-      <section className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1" aria-label="Indicadores principais">
+      <section className="grid grid-cols-4 gap-3.5 max-lg:grid-cols-2 max-md:grid-cols-1" aria-label="Indicadores principais">
         <MetricCard
-          label="BTCUSDT"
+          label="Preço BTCUSDT"
           value={formatMoney(market?.last_price, "USDT")}
-          detail={`Captura ${formatDateTime(market?.captured_at)}`}
-          tone={market ? "positive" : "neutral"}
+          detail={`24h ${percentLabel(market?.price_change_pct_24h)} - ${formatDateTime(market?.captured_at)}`}
+          tone={marketChangeTone(market?.price_change_pct_24h)}
         />
         <MetricCard
           label="Robô"
@@ -106,32 +107,42 @@ export default async function DashboardPage() {
         <MetricCard
           label="Última decisão"
           value={decisions[0]?.decision ?? "sem decisão"}
-          detail={decisions[0]?.reason ?? "Aguardando ciclo auditável"}
-          tone={decisions[0]?.decision === "COMPRA" ? "positive" : "warning"}
+          detail={shortText(decisions[0]?.reason ?? "Aguardando ciclo auditável")}
+          tone={decisionTone(decisions[0]?.decision)}
         />
       </section>
 
-      <section className="grid grid-cols-[minmax(0,1.25fr)_minmax(330px,0.75fr)] gap-[18px] max-lg:grid-cols-2 max-md:grid-cols-1">
+      <section className="grid grid-cols-[minmax(0,1.25fr)_minmax(330px,0.75fr)] gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
         <Panel className="row-span-2 max-lg:row-auto">
-          <PanelHeader eyebrow="Mercado" title="BTCUSDT 1h / 4h / 1d" icon={<LineChart />} />
-          <div
-            className="grid h-[318px] grid-cols-6 items-end gap-3 rounded-[40px] border border-line bg-[linear-gradient(180deg,rgba(243,115,56,0.12),rgba(243,115,56,0)),repeating-linear-gradient(0deg,transparent,transparent_47px,rgba(20,20,19,0.07)_48px)] p-6"
-            aria-label="Indicadores de mercado"
-          >
-            {["1h", "4h", "1d", "ATR", "RSI", "VOL"].map((label, index) => (
-              <span
-                className="relative min-h-[34px] rounded-t-full rounded-b-[10px] bg-ink after:absolute after:-top-[18px] after:left-1/2 after:size-2.5 after:-translate-x-1/2 after:rounded-full after:bg-signal-light after:content-['']"
-                key={label}
-                style={{ height: `${32 + index * 9}%` }}
-                title={label}
-              />
-            ))}
-          </div>
-          <div className="mt-4 grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-            <StatPill label="Tendência 1h" value={market?.trend_1h ?? "sem dado"} />
-            <StatPill label="Tendência 4h" value={market?.trend_4h ?? "sem dado"} />
-            <StatPill label="Tendência 1d" value={market?.trend_1d ?? "sem dado"} />
-            <StatPill label="Origem" value={sourceLabel(market?.source_payload)} />
+          <PanelHeader eyebrow="Mercado" title="BTCUSDT operacional" icon={<LineChart />} />
+          <div className="grid gap-4" aria-label="Indicadores de mercado">
+            <div className="grid gap-3 rounded-[24px] border border-line bg-aurum-white p-4">
+              <div className="flex items-start justify-between gap-4 max-md:flex-col">
+                <div className="min-w-0">
+                  <span className="text-[13px] font-medium text-muted">Último preço</span>
+                  <strong className="mt-1 block break-words text-[clamp(30px,4vw,46px)] font-medium leading-none tracking-[-0.02em]">
+                    {formatMoney(market?.last_price, "USDT")}
+                  </strong>
+                </div>
+                <StatusPill tone={marketChangeTone(market?.price_change_pct_24h)}>
+                  24h {percentLabel(market?.price_change_pct_24h)}
+                </StatusPill>
+              </div>
+              <div className="grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+                <InfoRow label="Máxima 24h" value={formatMoney(market?.high_price_24h)} />
+                <InfoRow label="Mínima 24h" value={formatMoney(market?.low_price_24h)} />
+                <InfoRow label="Volume 24h" value={market?.volume_24h ?? "-"} />
+                <InfoRow label="Spread" value={market?.spread_bps == null ? "-" : `${market.spread_bps} bps`} />
+                <InfoRow label="Volatilidade" value={percentLabel(market?.volatility_pct)} />
+                <InfoRow label="Captura" value={formatDateTime(market?.captured_at)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+              <StatPill label="Tendência 1h" value={market?.trend_1h ?? "sem dado"} />
+              <StatPill label="Tendência 4h" value={market?.trend_4h ?? "sem dado"} />
+              <StatPill label="Tendência 1d" value={market?.trend_1d ?? "sem dado"} />
+              <StatPill label="Origem" value={sourceLabel(market?.source_payload)} />
+            </div>
           </div>
         </Panel>
 
@@ -203,11 +214,28 @@ export default async function DashboardPage() {
 }
 
 function percentLabel(value: string | null | undefined) {
-  return value ? `${value}%` : "-";
+  return value == null || value === "" ? "-" : `${value}%`;
 }
 
 function sourceLabel(source: Record<string, unknown> | undefined) {
   if (!source) return "sem dado";
   const value = source.source;
   return typeof value === "string" ? value : "persistido";
+}
+
+function marketChangeTone(value: string | null | undefined): "positive" | "warning" | "neutral" {
+  const parsed = value == null ? Number.NaN : Number(value);
+  if (!Number.isFinite(parsed) || parsed === 0) return "neutral";
+  return parsed > 0 ? "positive" : "warning";
+}
+
+function decisionTone(value: string | undefined): "positive" | "warning" | "neutral" {
+  if (value === "COMPRA") return "positive";
+  if (value === "VENDA") return "warning";
+  if (value === "MANTER_POSICAO" || value === "NAO_OPERAR") return "neutral";
+  return "warning";
+}
+
+function shortText(value: string) {
+  return value.length > 88 ? `${value.slice(0, 85)}...` : value;
 }

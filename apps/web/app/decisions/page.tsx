@@ -1,7 +1,8 @@
-import { ArrowLeft, Bot, Gauge, ListFilter } from "lucide-react";
+import { Bot, Gauge, ListFilter } from "lucide-react";
 
+import { navItems } from "@/app/nav";
+import { AppShell } from "@/components/app-shell";
 import {
-  BackLink,
   EmptyState,
   Eyebrow,
   FilterChip,
@@ -35,15 +36,11 @@ export default async function DecisionsPage({
   const symbol = result.ok ? result.data.symbol : "BTCUSDT";
 
   return (
-    <main className="mx-auto grid min-h-screen max-w-[1220px] gap-6 p-6 max-md:p-4">
+    <AppShell navItems={navItems} activeLabel="Decisões">
       <PageHeader
-        leading={
-          <BackLink href="/" icon={<ArrowLeft size={18} aria-hidden="true" />}>
-            Dashboard
-          </BackLink>
-        }
         eyebrow={`Auditoria ${environment}`}
         title="Decisões do robô"
+        description="Histórico auditável dos ciclos, motivos, indicadores e resultado de execução do robô."
         trailing={
           <StatusPill>
             <Bot size={16} aria-hidden="true" />
@@ -72,7 +69,7 @@ export default async function DecisionsPage({
         ) : (
           decisions.map((item) => (
             <article
-              className="grid gap-[18px] rounded-[40px] border border-ink/10 bg-surface p-6 shadow-soft"
+              className="grid gap-[18px] rounded-[32px] border border-ink/10 bg-surface p-5 shadow-[0_18px_42px_rgba(20,20,19,0.055)]"
               key={item.id}
             >
               <div className="mb-0 flex items-start justify-between gap-4 max-md:flex-col">
@@ -113,7 +110,7 @@ export default async function DecisionsPage({
           Próxima
         </PagerLink>
       </footer>
-    </main>
+    </AppShell>
   );
 }
 
