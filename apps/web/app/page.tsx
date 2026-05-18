@@ -4,9 +4,6 @@ import {
   Bot,
   CirclePause,
   Database,
-  FileDown,
-  Gauge,
-  KeyRound,
   LineChart,
   Settings2,
   ShieldCheck,
@@ -14,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { navItems } from "@/app/nav";
 import { AppShell } from "@/components/app-shell";
 import {
   CompactList,
@@ -27,7 +25,6 @@ import {
   StatPill,
   StatusCluster,
   StatusPill,
-  type NavItem,
 } from "@/components/ui";
 import {
   apiUrl,
@@ -37,23 +34,6 @@ import {
   formatQuantity,
   getDashboardData,
 } from "@/lib/api";
-
-const navItems = [
-  { label: "Dashboard", href: "/", icon: Gauge },
-  { label: "Mercado", href: "/", icon: LineChart },
-  { label: "Carteira", href: "/", icon: Wallet },
-  { label: "Operações", href: "/", icon: Activity },
-  { label: "Decisões", href: "/decisions", icon: Bot },
-  { label: "Estratégias", href: "/configs", icon: Settings2 },
-  {
-    label: "MCP",
-    href: "/",
-    icon: KeyRound,
-    disabled: true,
-    title: "MCP será habilitado após VIC-33",
-  },
-  { label: "Exportações", href: "/", icon: FileDown },
-] as const satisfies readonly NavItem[];
 
 export default async function DashboardPage() {
   const data = await getDashboardData();

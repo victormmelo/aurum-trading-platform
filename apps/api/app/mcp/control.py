@@ -21,6 +21,16 @@ ALLOWED_MCP_SCOPES = {
     "read:reports",
 }
 
+READ_ONLY_MCP_TOOLS = [
+    "get_market_summary",
+    "get_portfolio_status",
+    "get_trade_history",
+    "get_decision_log",
+    "get_risk_status",
+    "get_strategy_config",
+    "explain_last_decision",
+]
+
 
 class McpTokenNotFoundError(Exception):
     """Raised when the requested MCP token does not exist."""
@@ -71,6 +81,16 @@ class McpStore(Protocol):
 
     def add_access_log(self, access_log: McpAccessLog) -> None: ...
 
+    def list_access_logs(
+        self,
+        *,
+        environment: str,
+        limit: int,
+        offset: int,
+        status: str | None,
+        resource: str | None,
+    ) -> list[McpAccessLog]: ...
+
     def commit(self) -> None: ...
 
 
@@ -104,6 +124,26 @@ class SqlAlchemyMcpStore:
     def add_access_log(self, access_log: McpAccessLog) -> None:
         self.session.add(access_log)
         self.session.flush()
+
+    def list_access_logs(
+        self,
+        *,
+        environment: str,
+        limit: int,
+        offset: int,
+        status: str | None,
+        resource: str | None,
+    ) -> list[McpAccessLog]:
+        statement = select(McpAccessLog).where(McpAccessLog.environment == environment)
+        if status is not None:
+            statement = statement.where(McpAccessLog.status == status)
+        if resource is not None:
+            statement = statement.where(McpAccessLog.resource == resource)
+        statement = statement.order_by(
+            McpAccessLog.occurred_at.desc(),
+            McpAccessLog.id.desc(),
+        ).limit(limit).offset(offset)
+        return list(self.session.scalars(statement))
 
     def commit(self) -> None:
         self.session.commit()
@@ -207,6 +247,24 @@ def record_mcp_access(
     store.add_access_log(access_log)
     store.commit()
     return access_log
+
+
+def list_mcp_access_logs(
+    store: McpStore,
+    *,
+    environment: str,
+    limit: int,
+    offset: int,
+    status: str | None,
+    resource: str | None,
+) -> list[McpAccessLog]:
+    return store.list_access_logs(
+        environment=environment,
+        limit=limit,
+        offset=offset,
+        status=status,
+        resource=resource,
+    )
 
 
 def hash_mcp_token(secret: str) -> str:

@@ -5,6 +5,14 @@ export type ApiResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string; data: null };
 
+export type McpScope =
+  | "read:market"
+  | "read:portfolio"
+  | "read:trades"
+  | "read:decisions"
+  | "read:config"
+  | "read:reports";
+
 export type BotStatus = {
   environment: string;
   symbol: string;
@@ -148,6 +156,56 @@ export type RiskConfig = {
   is_active: boolean;
 } | null;
 
+export type McpStatus = {
+  environment: string;
+  auth_enabled: boolean;
+  allowed_scopes: McpScope[];
+  tools: string[];
+};
+
+export type McpToken = {
+  id: string;
+  environment: string;
+  name: string;
+  agent_name: string | null;
+  scopes: McpScope[];
+  status: string;
+  expires_at: string | null;
+  revoked_at: string | null;
+  last_used_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type McpTokenCreateResponse = McpToken & {
+  token: string;
+};
+
+export type McpTokensResponse = {
+  environment: string;
+  tokens: McpToken[];
+};
+
+export type McpAccessLog = {
+  id: string;
+  environment: string;
+  token_id: string | null;
+  agent_name: string | null;
+  resource: string;
+  arguments: Record<string, unknown>;
+  status: string;
+  status_code: number | null;
+  error_message: string | null;
+  latency_ms: number | null;
+  occurred_at: string;
+  created_at: string | null;
+};
+
+export type McpAccessLogsResponse = {
+  environment: string;
+  logs: McpAccessLog[];
+};
+
 export async function fetchApi<T>(path: string): Promise<ApiResult<T>> {
   try {
     const response = await fetch(`${apiUrl}${path}`, { cache: "no-store" });
@@ -184,6 +242,31 @@ export async function postApi<T>(path: string, body?: unknown): Promise<ApiResul
     };
   }
 }
+
+export async function getMcpData() {
+  const [status, tokens, logs] = await Promise.all([
+    fetchApi<McpStatus>("/mcp/status"),
+    fetchApi<McpTokensResponse>("/mcp/tokens"),
+    fetchApi<McpAccessLogsResponse>("/mcp/audit-log?limit=20"),
+  ]);
+
+  return { status, tokens, logs };
+}
+
+export type ExportJob = {
+  id: string;
+  environment: string;
+  symbol: string;
+  status: "completed";
+  format: "csv" | "txt" | "pdf";
+  sections: Array<"market" | "portfolio" | "operations" | "decisions">;
+  content_type: string;
+  filename: string;
+  created_at: string;
+  completed_at: string;
+  filters: Record<string, unknown>;
+  content: string;
+};
 
 export async function getDashboardData() {
   const [

@@ -10,6 +10,8 @@ from app.core.config import get_settings
 from app.core.schemas import (
     McpAccessLogCreateRequest,
     McpAccessLogResponse,
+    McpAccessLogsResponse,
+    McpStatusResponse,
     McpTokenCreateRequest,
     McpTokenCreateResponse,
     McpTokenResponse,
@@ -19,6 +21,8 @@ from app.core.schemas import (
 )
 from app.db.session import get_db_session
 from app.mcp.control import (
+    ALLOWED_MCP_SCOPES,
+    READ_ONLY_MCP_TOOLS,
     McpAccessLogCreate,
     McpScopeError,
     McpStore,
@@ -27,6 +31,7 @@ from app.mcp.control import (
     McpTokenNotFoundError,
     SqlAlchemyMcpStore,
     create_mcp_token,
+    list_mcp_access_logs,
     list_mcp_tokens,
     record_mcp_access,
     revoke_mcp_token,
@@ -42,6 +47,17 @@ def _store(session: Session) -> McpStore:
 
 def _environment() -> str:
     return get_settings().aurum_environment
+
+
+@router.get("/status", response_model=McpStatusResponse)
+def mcp_status() -> McpStatusResponse:
+    settings = get_settings()
+    return McpStatusResponse(
+        environment=settings.aurum_environment,
+        auth_enabled=True,
+        allowed_scopes=sorted(ALLOWED_MCP_SCOPES),
+        tools=READ_ONLY_MCP_TOOLS,
+    )
 
 
 @router.post(
@@ -138,6 +154,33 @@ def create_mcp_access_log_endpoint(
         command=McpAccessLogCreate(**request.model_dump()),
     )
     return McpAccessLogResponse.model_validate(access_log, from_attributes=True)
+
+
+@router.get("/audit-log", response_model=McpAccessLogsResponse)
+def mcp_access_logs(
+    session: Annotated[Session, Depends(get_db_session)],
+    limit: int = 50,
+    offset: int = 0,
+    status: str | None = None,
+    resource: str | None = None,
+) -> McpAccessLogsResponse:
+    bounded_limit = min(max(limit, 1), 100)
+    bounded_offset = max(offset, 0)
+    environment = _environment()
+    return McpAccessLogsResponse(
+        environment=environment,
+        logs=[
+            McpAccessLogResponse.model_validate(access_log, from_attributes=True)
+            for access_log in list_mcp_access_logs(
+                _store(session),
+                environment=environment,
+                limit=bounded_limit,
+                offset=bounded_offset,
+                status=status,
+                resource=resource,
+            )
+        ],
+    )
 
 
 def _bearer_token(authorization: str | None) -> str:

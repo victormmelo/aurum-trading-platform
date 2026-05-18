@@ -40,6 +40,18 @@ def test_create_mcp_token_returns_secret_once_without_hash(monkeypatch) -> None:
     assert "token_hash" not in payload
 
 
+def test_mcp_status_returns_read_only_capabilities() -> None:
+    client = _client()
+
+    response = client.get("/mcp/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["environment"] == "testnet"
+    assert "read:market" in payload["allowed_scopes"]
+    assert "get_market_summary" in payload["tools"]
+
+
 def test_list_mcp_tokens_never_exposes_secret_or_hash(monkeypatch) -> None:  # noqa: ANN001
     token_id = uuid.uuid4()
     client = _client()
@@ -160,6 +172,45 @@ def test_create_mcp_audit_log_endpoint(monkeypatch) -> None:  # noqa: ANN001
 
     assert response.status_code == 201
     assert response.json()["id"] == str(log_id)
+
+
+def test_list_mcp_audit_log_endpoint(monkeypatch) -> None:  # noqa: ANN001
+    log_id = uuid.uuid4()
+    client = _client()
+
+    def list_logs(store, environment, limit, offset, status, resource):  # noqa: ANN001
+        assert environment == "testnet"
+        assert limit == 25
+        assert offset == 5
+        assert status == "success"
+        assert resource == "get_market_summary"
+        return [
+            SimpleNamespace(
+                id=log_id,
+                environment=environment,
+                token_id=None,
+                agent_name="codex",
+                resource=resource,
+                arguments={},
+                status=status,
+                status_code=200,
+                error_message=None,
+                latency_ms=10,
+                occurred_at=NOW,
+                created_at=None,
+            )
+        ]
+
+    monkeypatch.setattr(mcp_routes, "list_mcp_access_logs", list_logs)
+
+    response = client.get(
+        "/mcp/audit-log?limit=25&offset=5&status=success&resource=get_market_summary"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["environment"] == "testnet"
+    assert payload["logs"][0]["id"] == str(log_id)
 
 
 def _client() -> TestClient:

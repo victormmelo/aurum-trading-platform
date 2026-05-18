@@ -13,6 +13,7 @@ from app.mcp.control import (
     McpTokenInvalidError,
     create_mcp_token,
     hash_mcp_token,
+    list_mcp_access_logs,
     list_mcp_tokens,
     record_mcp_access,
     revoke_mcp_token,
@@ -149,10 +150,41 @@ def test_revoke_mcp_token_and_record_access_log() -> None:
     assert access_log.latency_ms == 12
 
 
+def test_list_mcp_access_logs_filters_and_paginates() -> None:
+    first = _access_log(resource="get_market_summary", status="success", occurred_at=NOW)
+    second = _access_log(
+        resource="get_portfolio_status",
+        status="error",
+        occurred_at=NOW + timedelta(seconds=1),
+    )
+    store = FakeMcpStore(access_logs=[first, second])
+
+    assert list_mcp_access_logs(
+        store,
+        environment="testnet",
+        limit=10,
+        offset=0,
+        status=None,
+        resource=None,
+    ) == [second, first]
+    assert list_mcp_access_logs(
+        store,
+        environment="testnet",
+        limit=10,
+        offset=0,
+        status="error",
+        resource=None,
+    ) == [second]
+
+
 class FakeMcpStore:
-    def __init__(self, tokens: list[McpToken] | None = None) -> None:
+    def __init__(
+        self,
+        tokens: list[McpToken] | None = None,
+        access_logs: list[McpAccessLog] | None = None,
+    ) -> None:
         self.tokens = tokens or []
-        self.access_logs: list[McpAccessLog] = []
+        self.access_logs = access_logs or []
         self.commits = 0
 
     def list_tokens(self, *, environment: str) -> list[McpToken]:
@@ -177,6 +209,27 @@ class FakeMcpStore:
     def add_access_log(self, access_log: McpAccessLog) -> None:
         self.access_logs.append(access_log)
 
+    def list_access_logs(
+        self,
+        *,
+        environment: str,
+        limit: int,
+        offset: int,
+        status: str | None,
+        resource: str | None,
+    ) -> list[McpAccessLog]:
+        logs = [
+            access_log
+            for access_log in self.access_logs
+            if access_log.environment == environment
+        ]
+        if status is not None:
+            logs = [access_log for access_log in logs if access_log.status == status]
+        if resource is not None:
+            logs = [access_log for access_log in logs if access_log.resource == resource]
+        logs.sort(key=lambda access_log: access_log.occurred_at, reverse=True)
+        return logs[offset : offset + limit]
+
     def commit(self) -> None:
         self.commits += 1
 
@@ -197,4 +250,20 @@ def _token(
         scopes=scopes or ["read:market"],
         status=status,
         expires_at=expires_at,
+    )
+
+
+def _access_log(*, resource: str, status: str, occurred_at: datetime) -> McpAccessLog:
+    return McpAccessLog(
+        id=uuid.uuid4(),
+        environment="testnet",
+        token_id=None,
+        agent_name="codex",
+        resource=resource,
+        arguments={},
+        status=status,
+        status_code=200 if status == "success" else 403,
+        error_message=None,
+        latency_ms=12,
+        occurred_at=occurred_at,
     )

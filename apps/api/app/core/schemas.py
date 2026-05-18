@@ -363,3 +363,15 @@ class McpAccessLogResponse(BaseModel):
     latency_ms: int | None
     occurred_at: datetime
     created_at: datetime | None = None
+
+
+class McpAccessLogsResponse(BaseModel):
+    environment: str
+    logs: list[McpAccessLogResponse]
+
+
+class McpStatusResponse(BaseModel):
+    environment: str
+    auth_enabled: bool
+    allowed_scopes: list[McpScope]
+    tools: list[str]
