@@ -13,22 +13,22 @@ export function AppShell({
   children: ReactNode;
 }) {
   return (
-    <main className="min-h-screen bg-parchment text-ink lg:grid lg:grid-cols-[256px_minmax(0,1fr)]">
-      <aside className="border-r border-line bg-canvas/90 px-4 py-4 max-lg:border-b">
-        <div className="grid gap-4 lg:sticky lg:top-4">
+    <main className="min-h-screen bg-parchment text-ink lg:grid lg:grid-cols-[232px_minmax(0,1fr)]">
+      <aside className="border-r border-line bg-parchment/90 px-4 py-4 backdrop-blur max-lg:border-b">
+        <div className="grid gap-5 lg:sticky lg:top-4">
           <AurumBrand />
           <nav
-            className="grid gap-1 rounded-[18px] border border-line bg-surface p-1 max-lg:grid-cols-4 max-md:grid-cols-2"
+            className="grid gap-1 max-lg:grid-cols-4 max-md:grid-cols-2"
             aria-label="Navegação principal"
           >
             {navItems.map(({ label, href, icon: Icon, disabled, title }) => (
               <Link
                 aria-disabled={disabled ? "true" : undefined}
                 className={cx(
-                  "flex min-h-11 items-center gap-3 rounded-[14px] px-3.5 text-sm font-medium text-muted transition-colors",
-                  label === activeLabel && "bg-ink text-canvas",
+                  "flex min-h-11 items-center gap-3 rounded-[11px] border border-transparent px-3.5 text-sm font-normal tracking-[-0.224px] text-muted transition-colors",
+                  label === activeLabel && "border-line bg-canvas text-ink",
                   disabled && "pointer-events-none opacity-45",
-                  !disabled && label !== activeLabel && "hover:bg-parchment hover:text-ink",
+                  !disabled && label !== activeLabel && "hover:bg-canvas/70 hover:text-ink",
                 )}
                 href={href}
                 key={label}
@@ -41,7 +41,7 @@ export function AppShell({
           </nav>
         </div>
       </aside>
-      <section className="mx-auto flex min-w-0 w-full max-w-[1680px] flex-col gap-5 px-6 py-5 max-md:p-4">
+      <section className="mx-auto flex min-w-0 w-full max-w-[1600px] flex-col gap-6 px-6 py-6 max-md:p-4">
         {children}
       </section>
     </main>
@@ -50,13 +50,13 @@ export function AppShell({
 
 function AurumBrand() {
   return (
-    <div className="flex min-h-[56px] items-center gap-3 rounded-[18px] border border-line bg-canvas px-3.5 py-3">
+    <div className="flex min-h-[56px] items-center gap-3 border-b border-line pb-4">
       <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ink text-[17px] font-semibold text-canvas">
         A
       </div>
       <div>
         <strong className="block text-[17px] font-semibold leading-tight tracking-[-0.34px]">Aurum</strong>
-        <span className="mt-0.5 block text-xs text-muted">BTC Testnet</span>
+        <span className="mt-0.5 block text-xs leading-none tracking-[-0.12px] text-muted">BTC Testnet</span>
       </div>
     </div>
   );

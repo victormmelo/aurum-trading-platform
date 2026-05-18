@@ -20,7 +20,6 @@
   --color-danger: #b3261e;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
   --font-display: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
-  --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.06);
 }
 
 @layer base {
