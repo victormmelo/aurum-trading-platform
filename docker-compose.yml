@@ -35,8 +35,8 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-development}
       API_VERSION: ${API_VERSION:-0.1.0}
-      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://aurum:aurum_dev_password@postgres:5432/aurum}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql+psycopg://aurum:aurum_dev_password@postgres:5432/aurum}
+      REDIS_URL: ${DOCKER_REDIS_URL:-redis://redis:6379/0}
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:
