@@ -12,14 +12,14 @@ type Tone = "neutral" | "positive" | "warning" | "danger";
 const toneText: Record<Tone, string> = {
   neutral: "text-ink",
   positive: "text-success",
-  warning: "text-signal",
+  warning: "text-warning",
   danger: "text-danger",
 };
 
 const statusTone: Record<Tone, string> = {
-  neutral: "border-ink/20 text-ink",
+  neutral: "border-line text-ink",
   positive: "border-success/35 bg-success/5 text-success",
-  warning: "border-signal/35 bg-signal/5 text-signal",
+  warning: "border-warning/35 bg-warning/5 text-warning",
   danger: "border-danger/35 bg-danger/5 text-danger",
 };
 
@@ -27,8 +27,8 @@ export function Eyebrow({ children, className }: { children: ReactNode; classNam
   return (
     <p
       className={cx(
-        "mb-2 flex items-center gap-2 text-xs font-bold uppercase leading-none tracking-[0.56px] text-muted",
-        "before:block before:size-1.5 before:rounded-full before:bg-signal before:content-['']",
+        "mb-2 flex items-center gap-2 text-xs font-semibold uppercase leading-none tracking-[0.24px] text-muted",
+        "before:block before:size-1.5 before:rounded-full before:bg-primary before:content-['']",
         className,
       )}
     >
@@ -39,7 +39,7 @@ export function Eyebrow({ children, className }: { children: ReactNode; classNam
 
 export function PageTitle({ children }: { children: ReactNode }) {
   return (
-    <h1 className="m-0 text-[clamp(32px,4vw,54px)] font-medium leading-[0.98] tracking-[-0.02em]">
+    <h1 className="m-0 font-display text-[clamp(32px,4vw,54px)] font-semibold leading-[1.05] tracking-[-0.02em]">
       {children}
     </h1>
   );
@@ -64,7 +64,7 @@ export function PageHeader({
       <div className="min-w-0 max-w-[820px]">
         <Eyebrow>{eyebrow}</Eyebrow>
         <PageTitle>{title}</PageTitle>
-        {description ? <p className="m-0 mt-3 max-w-[680px] text-sm leading-6 text-muted">{description}</p> : null}
+        {description ? <p className="m-0 mt-3 max-w-[680px] text-[15px] leading-6 text-muted">{description}</p> : null}
       </div>
       {trailing}
     </header>
@@ -82,7 +82,7 @@ export function BackLink({
 }) {
   return (
     <Link
-      className="inline-flex min-h-[38px] items-center gap-2 rounded-full border-[1.5px] border-ink bg-aurum-white px-4 text-sm font-medium text-ink transition-colors hover:bg-ink hover:text-canvas"
+      className="inline-flex min-h-[38px] items-center gap-2 rounded-full border border-line bg-canvas px-4 text-sm font-medium text-primary transition-colors hover:bg-parchment"
       href={href}
     >
       {icon}
@@ -103,7 +103,7 @@ export function StatusPill({
   return (
     <span
       className={cx(
-        "inline-flex min-h-[34px] max-w-full items-center gap-2 rounded-full border-[1.5px] bg-aurum-white px-3.5 text-sm font-medium leading-none [&_svg]:shrink-0",
+        "inline-flex min-h-[34px] max-w-full items-center gap-2 rounded-full border bg-canvas px-3.5 text-sm font-medium leading-none [&_svg]:shrink-0",
         statusTone[tone],
         className,
       )}
@@ -133,10 +133,10 @@ export function Notice({
   return (
     <section
       className={cx(
-        "flex items-start gap-2.5 rounded-[24px] border bg-surface px-4 py-3 text-sm leading-6",
+        "flex items-start gap-2.5 rounded-[18px] border bg-canvas px-4 py-3 text-sm leading-6",
         tone === "positive" && "border-success/45 text-success",
         tone === "danger" && "border-danger/45 text-danger",
-        tone === "warning" && "border-signal/45 text-signal",
+        tone === "warning" && "border-warning/45 text-warning",
         tone === "neutral" && "border-line text-ink",
       )}
     >
@@ -156,7 +156,7 @@ export function Panel({
   return (
     <article
       className={cx(
-        "min-w-0 rounded-[32px] border border-ink/10 bg-surface p-5 shadow-[0_18px_42px_rgba(20,20,19,0.055)]",
+        "min-w-0 rounded-[18px] border border-line bg-canvas p-5",
         className,
       )}
     >
@@ -178,9 +178,9 @@ export function PanelHeader({
     <div className="mb-4 flex items-start justify-between gap-4">
       <div className="min-w-0">
         <Eyebrow>{eyebrow}</Eyebrow>
-        <h2 className="m-0 text-[22px] font-medium leading-tight tracking-[-0.02em]">{title}</h2>
+        <h2 className="m-0 font-display text-[22px] font-semibold leading-tight tracking-[-0.02em]">{title}</h2>
       </div>
-      <span className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-full border border-ink/20 bg-aurum-white text-ink [&_svg]:size-[18px]">
+      <span className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-full border border-line bg-parchment text-ink [&_svg]:size-[18px]">
         {icon}
       </span>
     </div>
@@ -199,9 +199,9 @@ export function MetricCard({
   tone: Exclude<Tone, "danger">;
 }) {
   return (
-    <article className="grid min-h-[126px] content-between gap-3 rounded-[28px] border border-ink/10 bg-surface p-5 shadow-[0_14px_32px_rgba(20,20,19,0.045)]">
+    <article className="grid min-h-[126px] content-between gap-3 rounded-[18px] border border-line bg-canvas p-5">
       <span className="text-[13px] font-medium text-muted">{label}</span>
-      <strong className={cx("break-words text-[clamp(22px,1.9vw,28px)] font-medium leading-[1.05]", toneText[tone])}>
+      <strong className={cx("break-words font-display text-[clamp(22px,1.9vw,28px)] font-semibold leading-[1.08] tracking-[-0.02em]", toneText[tone])}>
         {value}
       </strong>
       <small className="text-xs leading-snug text-muted">{detail}</small>
@@ -220,7 +220,7 @@ export function InfoRow({ label, value }: { label: string; value: string }) {
 
 export function StatPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid min-h-[68px] gap-1.5 rounded-[22px] border border-line bg-aurum-white px-4 py-3">
+    <div className="grid min-h-[68px] gap-1.5 rounded-[18px] border border-line bg-canvas px-4 py-3">
       <span className="text-[13px] text-muted">{label}</span>
       <strong className="break-words text-base font-medium leading-snug">{value}</strong>
     </div>
@@ -229,7 +229,7 @@ export function StatPill({ label, value }: { label: string; value: string }) {
 
 export function EmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-[22px] border border-dashed border-line bg-canvas/70 p-4 text-sm leading-6 text-muted">
+    <div className="rounded-[18px] border border-dashed border-line bg-parchment p-4 text-sm leading-6 text-muted">
       {children}
     </div>
   );
@@ -243,8 +243,8 @@ export function JsonBlock({
   value: Record<string, unknown>;
 }) {
   return (
-    <section className="min-w-0 rounded-[24px] bg-ink p-4 text-canvas">
-      <h3 className="mb-2.5 flex items-center gap-2 text-sm font-bold tracking-normal text-signal-light">
+    <section className="min-w-0 rounded-[18px] bg-ink p-4 text-canvas">
+      <h3 className="mb-2.5 flex items-center gap-2 text-sm font-semibold tracking-normal text-primary-on-dark">
         <Braces size={14} aria-hidden="true" />
         {label}
       </h3>
@@ -265,8 +265,8 @@ export function JsonDetails({
   icon: ReactNode;
 }) {
   return (
-    <details className="rounded-[24px] bg-ink px-3.5 py-3 text-canvas">
-      <summary className="flex cursor-pointer items-center gap-2 text-[13px] font-bold text-signal-light">
+    <details className="rounded-[18px] bg-ink px-3.5 py-3 text-canvas">
+      <summary className="flex cursor-pointer items-center gap-2 text-[13px] font-semibold text-primary-on-dark">
         {icon}
         {label}
       </summary>
@@ -280,7 +280,7 @@ export function JsonDetails({
 export function PrimaryButton({ children }: { children: ReactNode }) {
   return (
     <button
-      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border-[1.5px] border-ink bg-ink px-[18px] font-medium text-canvas transition-transform active:translate-y-px"
+      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-[22px] font-medium text-canvas transition-colors hover:bg-primary-focus active:scale-[0.99]"
       type="submit"
     >
       {children}
@@ -291,7 +291,7 @@ export function PrimaryButton({ children }: { children: ReactNode }) {
 export function IconTextButton({ children }: { children: ReactNode }) {
   return (
     <button
-      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border-[1.5px] border-ink bg-aurum-white px-[18px] font-medium text-ink transition-colors hover:bg-ink hover:text-canvas"
+      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-line bg-canvas px-[18px] font-medium text-primary transition-colors hover:bg-parchment"
       type="submit"
     >
       {children}
@@ -311,8 +311,8 @@ export function FilterChip({
   return (
     <Link
       className={cx(
-        "inline-flex min-h-[38px] items-center gap-2 rounded-full border-[1.5px] border-ink bg-aurum-white px-4 text-sm font-medium text-ink transition-colors hover:bg-ink hover:text-canvas",
-        active && "bg-ink text-canvas",
+        "inline-flex min-h-[38px] items-center gap-2 rounded-full border border-line bg-canvas px-4 text-sm font-medium text-primary transition-colors hover:bg-parchment",
+        active && "border-primary bg-primary text-canvas hover:bg-primary",
       )}
       href={href}
     >
@@ -333,7 +333,7 @@ export function PagerLink({
   return (
     <Link
       className={cx(
-        "inline-flex min-h-[38px] items-center gap-2 rounded-full border-[1.5px] border-ink bg-aurum-white px-4 text-sm font-medium text-ink transition-colors hover:bg-ink hover:text-canvas",
+        "inline-flex min-h-[38px] items-center gap-2 rounded-full border border-line bg-canvas px-4 text-sm font-medium text-primary transition-colors hover:bg-parchment",
         disabled && "pointer-events-none opacity-45",
       )}
       href={href}
@@ -361,7 +361,7 @@ export function FieldGroup({
 }
 
 const fieldClass =
-  "min-h-11 w-full rounded-[20px] border-[1.5px] border-line bg-aurum-white px-3.5 py-2.5 text-ink outline-none transition-colors focus:border-signal";
+  "min-h-11 w-full rounded-[14px] border border-line bg-canvas px-3.5 py-2.5 text-ink outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15";
 
 export function LabeledInput({
   label,

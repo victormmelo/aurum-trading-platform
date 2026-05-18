@@ -1,22 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #f3f0ee;
-  --color-surface: #fcfbfa;
-  --color-aurum-white: #ffffff;
-  --color-ink: #141413;
-  --color-charcoal: #262627;
-  --color-muted: #696969;
-  --color-line: #d1cdc7;
-  --color-signal: #cf4500;
-  --color-signal-light: #f37338;
-  --color-link: #3860be;
-  --color-success: #16724f;
-  --color-danger: #9f2d1f;
-  --color-mastercard-red: #eb001b;
-  --color-mastercard-yellow: #f79e1b;
-  --font-sans: SofiaSans, Arial, sans-serif;
-  --shadow-soft: 0 24px 48px rgba(0, 0, 0, 0.08);
+  --color-canvas: #ffffff;
+  --color-parchment: #f5f5f7;
+  --color-surface: #fafafc;
+  --color-surface-dark: #1d1d1f;
+  --color-surface-tile: #272729;
+  --color-ink: #1d1d1f;
+  --color-charcoal: #333333;
+  --color-muted: #7a7a7a;
+  --color-subtle: #cccccc;
+  --color-line: #e0e0e0;
+  --color-divider: #f0f0f0;
+  --color-primary: #0066cc;
+  --color-primary-focus: #0071e3;
+  --color-primary-on-dark: #2997ff;
+  --color-success: #11845b;
+  --color-warning: #bf4800;
+  --color-danger: #b3261e;
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  --font-display: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.06);
 }
 
 @layer base {
@@ -31,10 +35,11 @@
   }
 
   body {
-    background: var(--color-canvas);
+    background: var(--color-parchment);
     color: var(--color-ink);
     font-family: var(--font-sans);
-    font-weight: 450;
+    font-weight: 400;
+    letter-spacing: -0.01em;
   }
 
   a {

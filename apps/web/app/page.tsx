@@ -116,7 +116,7 @@ export default async function DashboardPage() {
         <Panel className="row-span-2 max-lg:row-auto">
           <PanelHeader eyebrow="Mercado" title="BTCUSDT operacional" icon={<LineChart />} />
           <div className="grid gap-4" aria-label="Indicadores de mercado">
-            <div className="grid gap-3 rounded-[24px] border border-line bg-aurum-white p-4">
+            <div className="grid gap-3 rounded-[18px] border border-line bg-canvas p-4">
               <div className="flex items-start justify-between gap-4 max-md:flex-col">
                 <div className="min-w-0">
                   <span className="text-[13px] font-medium text-muted">Último preço</span>
@@ -168,9 +168,9 @@ export default async function DashboardPage() {
                   key={decision.id}
                 >
                   <time className="text-[13px] text-muted">{formatDateTime(decision.decided_at)}</time>
-                  <strong className="text-[13px] text-link">{decision.decision}</strong>
+                  <strong className="text-[13px] text-primary">{decision.decision}</strong>
                   <span className="text-[13px] text-muted">{decision.reason}</span>
-                  <Link className="font-bold text-signal" href={`/decisions?decision=${decision.decision}`}>
+                  <Link className="font-semibold text-primary" href={`/decisions?decision=${decision.decision}`}>
                     Abrir
                   </Link>
                 </div>

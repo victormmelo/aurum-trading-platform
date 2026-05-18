@@ -69,7 +69,7 @@ export default async function DecisionsPage({
         ) : (
           decisions.map((item) => (
             <article
-              className="grid gap-[18px] rounded-[32px] border border-ink/10 bg-surface p-5 shadow-[0_18px_42px_rgba(20,20,19,0.055)]"
+              className="grid gap-[18px] rounded-[18px] border border-line bg-canvas p-5"
               key={item.id}
             >
               <div className="mb-0 flex items-start justify-between gap-4 max-md:flex-col">
@@ -116,7 +116,7 @@ export default async function DecisionsPage({
 
 function MetaItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid gap-0.5 rounded-full bg-aurum-white px-4 py-3">
+    <div className="grid gap-0.5 rounded-full bg-canvas px-4 py-3">
       <span className="text-[13px] text-muted">{label}</span>
       <strong className="text-[13px] font-bold">{value}</strong>
     </div>

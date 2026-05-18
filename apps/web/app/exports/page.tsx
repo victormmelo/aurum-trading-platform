@@ -29,7 +29,7 @@ export default async function ExportsPage({ searchParams }: { searchParams?: Pro
           <form action={createExport} className="grid gap-3.5">
             <label className="grid gap-[7px]">
               <span className="text-[13px] text-muted">Formato</span>
-              <select className="min-h-11 rounded-[20px] border-[1.5px] border-line bg-aurum-white px-3.5" name="format" defaultValue="txt">
+              <select className="min-h-11 rounded-[14px] border border-line bg-canvas px-3.5" name="format" defaultValue="txt">
                 <option value="txt">TXT</option>
                 <option value="csv">CSV</option>
                 <option value="pdf">PDF</option>
@@ -37,7 +37,7 @@ export default async function ExportsPage({ searchParams }: { searchParams?: Pro
             </label>
             <div className="grid grid-cols-2 gap-2 max-md:grid-cols-1">
               {["market", "portfolio", "operations", "decisions"].map((section) => (
-                <label className="flex min-h-11 items-center gap-2 rounded-[20px] border border-line bg-aurum-white px-3.5 text-sm" key={section}>
+                <label className="flex min-h-11 items-center gap-2 rounded-[14px] border border-line bg-canvas px-3.5 text-sm" key={section}>
                   <input name="sections" type="checkbox" value={section} defaultChecked />
                   {section}
                 </label>

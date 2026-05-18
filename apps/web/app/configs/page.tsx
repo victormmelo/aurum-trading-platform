@@ -292,7 +292,7 @@ function ConfigRowHeader({
   return (
     <div className="flex items-start justify-between gap-4 max-md:flex-col max-md:items-stretch">
       <div>
-        <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase leading-none tracking-[0.56px] text-muted before:block before:size-1.5 before:rounded-full before:bg-signal before:content-['']">
+        <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase leading-none tracking-[0.24px] text-muted before:block before:size-1.5 before:rounded-full before:bg-primary before:content-['']">
           v{config.version}
         </p>
         <h2 className="m-0 text-2xl font-medium leading-tight tracking-[-0.02em]">{config.name}</h2>
@@ -317,8 +317,8 @@ function ConfigRowHeader({
 
 function configRowClass(isActive: boolean) {
   return cx(
-    "grid gap-4 rounded-[32px] border border-line bg-aurum-white p-[18px]",
-    isActive && "border-success/45 shadow-[inset_0_0_0_1px_rgba(22,114,79,0.12)]",
+    "grid gap-4 rounded-[18px] border border-line bg-canvas p-[18px]",
+    isActive && "border-success/45 bg-success/5",
   );
 }
 

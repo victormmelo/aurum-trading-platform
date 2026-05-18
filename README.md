@@ -110,7 +110,7 @@ Frontend implementation standards:
 
 ## Agent workflow
 
-Agents working on this repository should follow [AGENTS.md](AGENTS.md). The Slack Canvas is the central project documentation, Linear is the source of task execution state, and frontend work should align with `DESIGN.md`, the `npx getdesign@latest add mastercard` design direction, TailwindCSS, and reusable components in `apps/web/components`.
+Agents working on this repository should follow [AGENTS.md](AGENTS.md). The Slack Canvas is the central project documentation, the [frontend Apple Canvas](https://rvxsolutions.slack.com/docs/T0B4MRY2N8Y/F0B460FPCEB) is the durable visual decision, Linear is the source of task execution state, and frontend work should align with `DESIGN.md`, the `npx getdesign@latest add apple` design direction, TailwindCSS, and reusable components in `apps/web/components`.
 
 ## Safety assumptions
 

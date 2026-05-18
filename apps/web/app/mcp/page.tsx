@@ -81,7 +81,7 @@ export default async function McpPage({ searchParams }: { searchParams?: Promise
               <span className="text-[13px] text-muted">Escopos</span>
               <div className="grid grid-cols-2 gap-2 max-md:grid-cols-1">
                 {scopeLabels.map((scope) => (
-                  <label className="flex min-h-11 items-center gap-2 rounded-[20px] border border-line bg-aurum-white px-3.5 text-sm" key={scope}>
+                  <label className="flex min-h-11 items-center gap-2 rounded-[14px] border border-line bg-canvas px-3.5 text-sm" key={scope}>
                     <input name="scopes" type="checkbox" value={scope} defaultChecked={scope !== "read:reports"} />
                     {scope}
                   </label>
@@ -133,7 +133,7 @@ export default async function McpPage({ searchParams }: { searchParams?: Promise
 
 function TokenRow({ token }: { token: McpToken }) {
   return (
-    <article className="grid gap-3 rounded-[32px] border border-line bg-aurum-white p-[18px]">
+    <article className="grid gap-3 rounded-[18px] border border-line bg-canvas p-[18px]">
       <div className="flex items-start justify-between gap-4 max-md:flex-col">
         <div>
           <h2 className="m-0 text-2xl font-medium leading-tight tracking-[-0.02em]">{token.name}</h2>
@@ -162,7 +162,7 @@ function TokenRow({ token }: { token: McpToken }) {
 
 function LogRow({ log }: { log: McpAccessLog }) {
   return (
-    <article className="grid gap-2 rounded-[28px] border border-line bg-aurum-white p-4">
+    <article className="grid gap-2 rounded-[18px] border border-line bg-canvas p-4">
       <div className="flex items-center justify-between gap-3">
         <strong className="break-all text-sm">{log.resource}</strong>
         <StatusPill tone={log.status === "success" ? "positive" : "danger"}>{log.status}</StatusPill>
