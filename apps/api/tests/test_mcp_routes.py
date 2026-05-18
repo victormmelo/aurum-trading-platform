@@ -113,6 +113,51 @@ def test_validate_mcp_token_endpoint_requires_bearer_and_scope(monkeypatch) -> N
     assert response.json()["token_id"] == str(token_id)
 
 
+def test_validate_mcp_token_endpoint_blocks_rate_limit_and_records_audit(
+    monkeypatch,
+) -> None:  # noqa: ANN001
+    token_id = uuid.uuid4()
+    recorded = {}
+    client = _client(rate_limit_store=BlockingRateLimitStore())
+
+    def validate(store, bearer_token, required_scopes, resource):  # noqa: ANN001
+        return _token(token_id=token_id, scopes=["read:market"])
+
+    def record(store, environment, command):  # noqa: ANN001
+        recorded["environment"] = environment
+        recorded["command"] = command
+        return SimpleNamespace(
+            id=uuid.uuid4(),
+            environment=environment,
+            token_id=command.token_id,
+            agent_name=command.agent_name,
+            resource=command.resource,
+            arguments=command.arguments,
+            status=command.status,
+            status_code=command.status_code,
+            error_message=command.error_message,
+            latency_ms=command.latency_ms,
+            occurred_at=NOW,
+            created_at=None,
+        )
+
+    monkeypatch.setattr(mcp_routes, "validate_mcp_token", validate)
+    monkeypatch.setattr(mcp_routes, "record_mcp_access", record)
+
+    response = client.post(
+        "/mcp/auth/validate",
+        headers={"Authorization": "Bearer aurum_mcp_secret"},
+        json={"resource": "get_market_summary", "required_scopes": ["read:market"]},
+    )
+
+    assert response.status_code == 429
+    assert recorded["environment"] == "testnet"
+    assert recorded["command"].token_id == token_id
+    assert recorded["command"].resource == "get_market_summary"
+    assert recorded["command"].status == "blocked"
+    assert recorded["command"].status_code == 429
+
+
 def test_validate_mcp_token_endpoint_blocks_insufficient_scope(monkeypatch) -> None:  # noqa: ANN001
     client = _client()
 
@@ -213,9 +258,12 @@ def test_list_mcp_audit_log_endpoint(monkeypatch) -> None:  # noqa: ANN001
     assert payload["logs"][0]["id"] == str(log_id)
 
 
-def _client() -> TestClient:
+def _client(rate_limit_store=None) -> TestClient:  # noqa: ANN001
     app = create_app()
     app.dependency_overrides[get_db_session] = lambda: object()
+    app.dependency_overrides[mcp_routes._rate_limit_store] = (
+        lambda: rate_limit_store or AllowingRateLimitStore()
+    )
     return TestClient(app)
 
 
@@ -238,3 +286,13 @@ def _token(
         created_at=None,
         updated_at=None,
     )
+
+
+class AllowingRateLimitStore:
+    def increment(self, key: str, *, ttl_seconds: int) -> int:
+        return 1
+
+
+class BlockingRateLimitStore:
+    def increment(self, key: str, *, ttl_seconds: int) -> int:
+        return 61

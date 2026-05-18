@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from functools import lru_cache
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -37,6 +38,12 @@ from app.mcp.control import (
     revoke_mcp_token,
     validate_mcp_token,
 )
+from app.mcp.rate_limit import (
+    McpRateLimitExceededError,
+    McpRateLimitStore,
+    check_mcp_rate_limit,
+    create_redis_rate_limit_store,
+)
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
 
@@ -47,6 +54,11 @@ def _store(session: Session) -> McpStore:
 
 def _environment() -> str:
     return get_settings().aurum_environment
+
+
+@lru_cache
+def _rate_limit_store() -> McpRateLimitStore:
+    return create_redis_rate_limit_store(get_settings().redis_url)
 
 
 @router.get("/status", response_model=McpStatusResponse)
@@ -113,12 +125,14 @@ def revoke_mcp_token_endpoint(
 def validate_mcp_token_endpoint(
     request: McpTokenValidateRequest,
     session: Annotated[Session, Depends(get_db_session)],
+    rate_limit_store: Annotated[McpRateLimitStore, Depends(_rate_limit_store)],
     authorization: Annotated[str | None, Header()] = None,
 ) -> McpTokenValidateResponse:
     bearer_token = _bearer_token(authorization)
+    store = _store(session)
     try:
         token = validate_mcp_token(
-            _store(session),
+            store,
             bearer_token=bearer_token,
             required_scopes=list(request.required_scopes),
             resource=request.resource,
@@ -130,6 +144,33 @@ def validate_mcp_token_endpoint(
         ) from exc
     except McpTokenInvalidError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+
+    try:
+        check_mcp_rate_limit(
+            rate_limit_store,
+            environment=token.environment,
+            token_id=token.id,
+            resource=request.resource,
+        )
+    except McpRateLimitExceededError as exc:
+        record_mcp_access(
+            store,
+            environment=token.environment,
+            command=McpAccessLogCreate(
+                token_id=token.id,
+                agent_name=token.agent_name,
+                resource=request.resource,
+                arguments={"required_scopes": list(request.required_scopes)},
+                status="blocked",
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                error_message=str(exc),
+                latency_ms=None,
+            ),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(exc),
+        ) from exc
 
     return McpTokenValidateResponse(
         token_id=token.id,

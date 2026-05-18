@@ -240,15 +240,16 @@ class AurumMcpServer:
                 latency_ms=_latency_ms(started_at),
             )
         except Exception as exc:
-            self._record_access(
-                name=str(name),
-                arguments=arguments,
-                auth_context=auth_context,
-                status="error",
-                status_code=getattr(exc, "status_code", None),
-                error_message=str(exc),
-                latency_ms=_latency_ms(started_at),
-            )
+            if getattr(exc, "status_code", None) != 429:
+                self._record_access(
+                    name=str(name),
+                    arguments=arguments,
+                    auth_context=auth_context,
+                    status="error",
+                    status_code=getattr(exc, "status_code", None),
+                    error_message=str(exc),
+                    latency_ms=_latency_ms(started_at),
+                )
             raise
 
         return {
