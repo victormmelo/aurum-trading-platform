@@ -1,11 +1,32 @@
-import { AlertTriangle, Wallet } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RefreshCw, Wallet } from "lucide-react";
 
+import { reconcilePortfolio } from "@/app/portfolio/actions";
 import { navItems } from "@/app/nav";
 import { AppShell } from "@/components/app-shell";
-import { CompactList, InfoRow, MetricCard, Notice, PageHeader, Panel, PanelHeader, StatusPill } from "@/components/ui";
+import {
+  CompactList,
+  IconTextButton,
+  InfoRow,
+  MetricCard,
+  MetricCardGroup,
+  Notice,
+  PageHeader,
+  Panel,
+  PanelHeader,
+  StatusPill,
+} from "@/components/ui";
 import { fetchApi, formatDateTime, formatMoney, formatQuantity, type PortfolioStatus } from "@/lib/api";
 
-export default async function PortfolioPage() {
+type SearchParams = Record<string, string | string[] | undefined>;
+
+export default async function PortfolioPage({
+  searchParams,
+}: {
+  searchParams?: Promise<SearchParams>;
+}) {
+  const params = searchParams ? await searchParams : {};
+  const success = single(params.success);
+  const error = single(params.error);
   const result = await fetchApi<PortfolioStatus>("/portfolio/status");
   const snapshot = result.ok ? result.data.snapshot : null;
   const position = result.ok ? result.data.position : null;
@@ -17,15 +38,30 @@ export default async function PortfolioPage() {
       <PageHeader
         eyebrow={`Carteira ${environment}`}
         title="Posição financeira"
-        trailing={<StatusPill><Wallet size={16} aria-hidden="true" />{symbol}</StatusPill>}
+        trailing={
+          <div className="flex flex-wrap items-center gap-2">
+            <form action={reconcilePortfolio}>
+              <IconTextButton>
+                <RefreshCw size={16} aria-hidden="true" />
+                Reconciliar
+              </IconTextButton>
+            </form>
+            <StatusPill>
+              <Wallet size={16} aria-hidden="true" />
+              {symbol}
+            </StatusPill>
+          </div>
+        }
       />
+      {success ? <Notice tone="positive" icon={<CheckCircle2 size={18} aria-hidden="true" />}>{success}</Notice> : null}
+      {error ? <Notice tone="danger" icon={<AlertTriangle size={18} aria-hidden="true" />}>{error}</Notice> : null}
       {!result.ok ? <Notice tone="danger" icon={<AlertTriangle size={18} aria-hidden="true" />}>API sem resposta: {result.error}</Notice> : null}
-      <section className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
+      <MetricCardGroup aria-label="Indicadores da carteira">
         <MetricCard label="Patrimônio" value={formatMoney(snapshot?.total_equity)} detail={`Captura ${formatDateTime(snapshot?.captured_at)}`} tone="neutral" />
         <MetricCard label="USDT" value={formatMoney(snapshot?.usdt_balance)} detail="Saldo disponível" tone="neutral" />
         <MetricCard label="BTC" value={formatQuantity(snapshot?.btc_balance)} detail={formatMoney(snapshot?.btc_market_value)} tone="positive" />
         <MetricCard label="Exposição" value={percentLabel(snapshot?.exposure_pct)} detail="Long-only" tone="warning" />
-      </section>
+      </MetricCardGroup>
       <section className="grid grid-cols-2 gap-[18px] max-md:grid-cols-1">
         <Panel>
           <PanelHeader eyebrow="Resultado" title="PnL e taxas" icon={<Wallet />} />
@@ -51,4 +87,8 @@ export default async function PortfolioPage() {
 
 function percentLabel(value: string | null | undefined) {
   return value == null || value === "" ? "-" : `${value}%`;
+}
+
+function single(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
 }

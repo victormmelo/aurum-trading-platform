@@ -1,32 +1,109 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #0066cc;
-  --color-primary-focus: #0071e3;
-  --color-primary-on-dark: #2997ff;
-  --color-ink: #1d1d1f;
-  --color-body: #1d1d1f;
-  --color-body-on-dark: #ffffff;
-  --color-body-muted: #cccccc;
-  --color-ink-muted-80: #333333;
-  --color-ink-muted-48: #7a7a7a;
-  --color-divider-soft: #f0f0f0;
-  --color-hairline: #e0e0e0;
-  --color-canvas: #ffffff;
-  --color-canvas-parchment: #f5f5f7;
-  --color-surface-pearl: #fafafc;
-  --color-surface-tile-1: #272729;
-  --color-surface-tile-2: #2a2a2c;
-  --color-surface-tile-3: #252527;
-  --color-surface-black: #000000;
-  --color-surface-chip-translucent: #d2d2d7;
-  --color-on-primary: #ffffff;
-  --color-on-dark: #ffffff;
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
-  --font-display: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-brand-lime: var(--brand-lime);
+  --color-brand-lime-foreground: var(--brand-lime-foreground);
+  --color-primary-focus: color-mix(in srgb, var(--primary) 86%, black);
+  --color-primary-on-dark: color-mix(in srgb, white 78%, var(--primary));
+  --color-ink: var(--foreground);
+  --color-body: var(--foreground);
+  --color-body-on-dark: var(--primary-foreground);
+  --color-body-muted: var(--muted-foreground);
+  --color-ink-muted-80: color-mix(in srgb, var(--foreground) 78%, white);
+  --color-ink-muted-48: var(--muted-foreground);
+  --color-divider-soft: var(--muted);
+  --color-hairline: var(--border);
+  --color-canvas: var(--card);
+  --color-canvas-parchment: var(--dashboard-background);
+  --color-surface-pearl: var(--muted);
+  --color-surface-tile-1: var(--primary-dark);
+  --color-surface-tile-2: color-mix(in srgb, var(--primary-dark) 88%, black);
+  --color-surface-tile-3: color-mix(in srgb, var(--primary-dark) 78%, black);
+  --color-surface-black: var(--primary-dark);
+  --color-surface-chip-translucent: color-mix(in srgb, var(--primary) 10%, white);
+  --color-on-primary: var(--primary-foreground);
+  --color-on-dark: var(--primary-foreground);
+  --font-sans: var(--font-poppins), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-poppins), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 @layer base {
+  :root {
+    --radius: 0.625rem;
+    --dashboard-topbar-height: 3.5rem;
+    --dashboard-background: color-mix(in srgb, var(--primary) 8%, white);
+    --background: oklch(1 0 0);
+    --foreground: oklch(0 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0 0 0);
+    --primary: #107e59;
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.985 0 0);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --sidebar: #107e59;
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-accent: color-mix(in srgb, white 14%, var(--primary));
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 18%);
+    --success: oklch(0.65 0.2 145);
+    --success-foreground: oklch(0.98 0 0);
+    --warning: oklch(0.75 0.2 85);
+    --warning-foreground: oklch(0.15 0 0);
+    --info: oklch(0.6 0.2 240);
+    --info-foreground: oklch(0.98 0 0);
+    --brand-lime: #63b32e;
+    --brand-lime-foreground: oklch(0.15 0 0);
+    --primary-dark: #0d3d2d;
+    --primary-subtle: oklch(0.95 0.03 160);
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --dashboard-topbar-height: 4rem;
+    }
+  }
+
   * {
     box-sizing: border-box;
   }
@@ -38,11 +115,11 @@
   }
 
   body {
-    background: var(--color-canvas-parchment);
-    color: var(--color-ink);
+    background: var(--dashboard-background);
+    color: var(--foreground);
     font-family: var(--font-sans);
     font-weight: 400;
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
   }
 
   a {

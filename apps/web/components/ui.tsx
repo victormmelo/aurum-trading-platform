@@ -1,7 +1,7 @@
 import { Braces } from "lucide-react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 export function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -10,24 +10,31 @@ export function cx(...classes: Array<string | false | null | undefined>) {
 type Tone = "neutral" | "positive" | "warning" | "danger";
 
 const toneText: Record<Tone, string> = {
-  neutral: "text-ink",
+  neutral: "text-foreground",
   positive: "text-primary",
-  warning: "text-ink-muted-80",
-  danger: "text-ink",
+  warning: "text-warning",
+  danger: "text-destructive",
+};
+
+const metricAccent: Record<Tone, string> = {
+  neutral: "bg-slate-300",
+  positive: "bg-green-500",
+  warning: "bg-amber-500",
+  danger: "bg-red-500",
 };
 
 const statusTone: Record<Tone, string> = {
-  neutral: "border-hairline text-ink",
-  positive: "border-primary/35 bg-surface-pearl text-primary",
-  warning: "border-hairline bg-surface-pearl text-ink-muted-80",
-  danger: "border-hairline bg-canvas text-ink",
+  neutral: "border-border bg-background text-foreground",
+  positive: "border-primary/25 bg-primary/10 text-primary",
+  warning: "border-warning/30 bg-warning/15 text-foreground",
+  danger: "border-destructive/30 bg-destructive/10 text-destructive",
 };
 
 export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <p
       className={cx(
-        "mb-2 flex items-center gap-2 text-xs font-semibold uppercase leading-none tracking-[0.12px] text-ink-muted-48",
+        "mb-2 flex items-center gap-2 text-xs font-semibold uppercase leading-none tracking-wide text-muted-foreground",
         "before:block before:size-1.5 before:rounded-full before:bg-primary before:content-['']",
         className,
       )}
@@ -39,7 +46,7 @@ export function Eyebrow({ children, className }: { children: ReactNode; classNam
 
 export function PageTitle({ children }: { children: ReactNode }) {
   return (
-    <h1 className="m-0 font-display text-[34px] font-semibold leading-[1.08] tracking-[-0.28px] md:text-[48px]">
+    <h1 className="m-0 text-3xl font-bold leading-tight tracking-tight md:text-4xl">
       {children}
     </h1>
   );
@@ -59,12 +66,12 @@ export function PageHeader({
   trailing?: ReactNode;
 }) {
   return (
-    <header className="flex items-start justify-between gap-8 border-b border-hairline pb-6 max-md:flex-col max-md:items-stretch">
+    <header className="flex items-start justify-between gap-6 max-md:flex-col max-md:items-stretch">
       {leading}
       <div className="min-w-0 max-w-[820px]">
         <Eyebrow>{eyebrow}</Eyebrow>
         <PageTitle>{title}</PageTitle>
-        {description ? <p className="m-0 mt-3 max-w-[680px] text-[17px] leading-[1.47] tracking-[-0.374px] text-ink-muted-48">{description}</p> : null}
+        {description ? <p className="m-0 mt-2 max-w-[680px] text-sm leading-6 text-muted-foreground md:text-base">{description}</p> : null}
       </div>
       {trailing}
     </header>
@@ -82,7 +89,7 @@ export function BackLink({
 }) {
   return (
     <Link
-      className="inline-flex min-h-[38px] items-center gap-2 rounded-full border border-primary bg-canvas px-4 text-sm font-normal text-primary transition-[background-color,transform] hover:bg-surface-pearl active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-focus"
+      className="inline-flex min-h-10 items-center gap-2 rounded-md border border-primary bg-background px-4 text-sm font-medium text-primary transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       href={href}
     >
       {icon}
@@ -103,7 +110,7 @@ export function StatusPill({
   return (
     <span
       className={cx(
-        "inline-flex min-h-[34px] max-w-full items-center gap-2 rounded-full border bg-canvas px-3.5 text-sm font-normal leading-none tracking-[-0.224px] [&_svg]:shrink-0",
+        "inline-flex min-h-8 max-w-full items-center gap-2 rounded-md border px-3 text-xs font-medium leading-none [&_svg]:shrink-0",
         statusTone[tone],
         className,
       )}
@@ -133,11 +140,11 @@ export function Notice({
   return (
     <section
       className={cx(
-        "flex items-start gap-2.5 rounded-[18px] border bg-canvas px-4 py-3 text-sm leading-6 tracking-[-0.224px]",
-        tone === "positive" && "border-primary/45 text-primary",
-        tone === "danger" && "border-hairline text-ink",
-        tone === "warning" && "border-hairline bg-surface-pearl text-ink-muted-80",
-        tone === "neutral" && "border-hairline text-ink",
+        "flex items-start gap-2.5 rounded-lg border bg-card px-4 py-3 text-sm leading-6",
+        tone === "positive" && "border-primary/25 bg-primary/10 text-primary",
+        tone === "danger" && "border-destructive/30 bg-destructive/10 text-destructive",
+        tone === "warning" && "border-warning/30 bg-warning/15 text-foreground",
+        tone === "neutral" && "border-border text-foreground",
       )}
     >
       {icon}
@@ -156,7 +163,7 @@ export function Panel({
   return (
     <article
       className={cx(
-        "min-w-0 rounded-[18px] border border-hairline bg-canvas p-5 md:p-6",
+        "min-w-0 rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm md:p-6",
         className,
       )}
     >
@@ -178,12 +185,34 @@ export function PanelHeader({
     <div className="mb-5 flex items-start justify-between gap-4">
       <div className="min-w-0">
         <Eyebrow>{eyebrow}</Eyebrow>
-        <h2 className="m-0 font-display text-[24px] font-semibold leading-[1.15] tracking-[-0.24px]">{title}</h2>
+        <h2 className="m-0 text-xl font-semibold leading-tight tracking-tight">{title}</h2>
       </div>
-      <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-hairline bg-canvas-parchment text-ink [&_svg]:size-[18px]">
+      <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary [&_svg]:size-[18px]">
         {icon}
       </span>
     </div>
+  );
+}
+
+export function MetricCardGroup({
+  children,
+  className,
+  ...props
+}: {
+  children: ReactNode;
+  className?: string;
+  columns?: 2 | 3 | 4;
+} & Omit<ComponentPropsWithoutRef<"section">, "children" | "className">) {
+  return (
+    <section
+      {...props}
+      className={cx(
+        "flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm lg:flex-row lg:divide-x lg:divide-y-0 divide-y divide-border",
+        className,
+      )}
+    >
+      {children}
+    </section>
   );
 }
 
@@ -196,42 +225,65 @@ export function MetricCard({
   label: string;
   value: string;
   detail: string;
-  tone: Exclude<Tone, "danger">;
+  tone: Tone;
 }) {
   return (
-    <article className="grid min-h-[132px] content-between gap-3 rounded-[18px] border border-hairline bg-canvas p-5">
-      <span className="text-sm font-normal leading-[1.43] tracking-[-0.224px] text-ink-muted-48">{label}</span>
-      <strong className={cx("break-words font-display text-[24px] font-semibold leading-[1.1] tracking-[-0.24px] md:text-[28px]", toneText[tone])}>
-        {value}
-      </strong>
-      <small className="text-xs leading-[1.3] tracking-[-0.12px] text-ink-muted-48">{detail}</small>
+    <article className="relative grid min-h-[132px] flex-1 content-between gap-1 px-6 py-4 text-left">
+      <div className={cx("absolute left-0 right-0 top-0 h-1", metricAccent[tone])} />
+      <strong className={cx("break-words text-xl font-bold leading-tight", toneText[tone])}>{value}</strong>
+      <span className="text-xs font-medium uppercase leading-5 tracking-wider text-muted-foreground">{label}</span>
+      <small className="text-xs leading-5 text-muted-foreground/80">{detail}</small>
     </article>
   );
 }
 
 export function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid min-h-[40px] grid-cols-[minmax(112px,0.65fr)_minmax(0,1fr)] items-center gap-3 border-b border-hairline pb-3 max-md:grid-cols-1">
-      <span className="text-[13px] leading-[1.43] tracking-[-0.224px] text-ink-muted-48">{label}</span>
-      <strong className="break-words text-right text-[17px] font-semibold leading-[1.24] tracking-[-0.374px] max-md:text-left">{value}</strong>
+    <div className="grid min-h-[40px] grid-cols-[minmax(112px,0.65fr)_minmax(0,1fr)] items-center gap-3 border-b border-border pb-3 max-md:grid-cols-1">
+      <span className="text-xs font-medium leading-5 text-muted-foreground">{label}</span>
+      <strong className="break-words text-right text-sm font-semibold leading-5 max-md:text-left">{value}</strong>
     </div>
   );
 }
 
 export function StatPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid min-h-[68px] gap-1.5 rounded-[18px] border border-hairline bg-surface-pearl px-4 py-3">
-      <span className="text-[13px] leading-[1.43] tracking-[-0.224px] text-ink-muted-48">{label}</span>
-      <strong className="break-words text-[17px] font-semibold leading-[1.24] tracking-[-0.374px]">{value}</strong>
+    <div className="grid min-h-[68px] gap-1.5 rounded-lg border border-border bg-muted px-4 py-3">
+      <span className="text-xs font-medium leading-5 text-muted-foreground">{label}</span>
+      <strong className="break-words text-sm font-semibold leading-5">{value}</strong>
     </div>
   );
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-[18px] border border-dashed border-hairline bg-canvas-parchment p-4 text-sm leading-6 tracking-[-0.224px] text-ink-muted-48">
+    <div className="rounded-lg border border-dashed border-border bg-muted p-4 text-sm leading-6 text-muted-foreground">
       {children}
     </div>
+  );
+}
+
+export function ActionItem({
+  tone,
+  title,
+  description,
+}: {
+  tone: Exclude<Tone, "neutral">;
+  title: string;
+  description: string;
+}) {
+  return (
+    <article
+      className={cx(
+        "rounded-lg border p-4",
+        tone === "positive" && "border-primary/25 bg-primary/10",
+        tone === "warning" && "border-warning/30 bg-warning/15",
+        tone === "danger" && "border-destructive/30 bg-destructive/10",
+      )}
+    >
+      <strong className="block text-sm font-semibold leading-5 text-foreground">{title}</strong>
+      <p className="m-0 mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
+    </article>
   );
 }
 
@@ -243,8 +295,8 @@ export function JsonBlock({
   value: Record<string, unknown>;
 }) {
   return (
-    <section className="min-w-0 rounded-[18px] bg-ink p-4 text-on-primary">
-      <h3 className="mb-2.5 flex items-center gap-2 text-sm font-semibold tracking-normal text-primary-on-dark">
+    <section className="min-w-0 rounded-lg bg-[var(--primary-dark)] p-4 text-primary-foreground">
+      <h3 className="mb-2.5 flex items-center gap-2 text-sm font-semibold tracking-normal text-primary-foreground/80">
         <Braces size={14} aria-hidden="true" />
         {label}
       </h3>
@@ -265,8 +317,8 @@ export function JsonDetails({
   icon: ReactNode;
 }) {
   return (
-    <details className="rounded-[18px] bg-ink px-3.5 py-3 text-on-primary">
-      <summary className="flex cursor-pointer items-center gap-2 text-[13px] font-semibold text-primary-on-dark">
+    <details className="rounded-lg bg-[var(--primary-dark)] px-3.5 py-3 text-primary-foreground">
+      <summary className="flex cursor-pointer items-center gap-2 text-[13px] font-semibold text-primary-foreground/80">
         {icon}
         {label}
       </summary>
@@ -280,7 +332,7 @@ export function JsonDetails({
 export function PrimaryButton({ children }: { children: ReactNode }) {
   return (
     <button
-      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-[22px] text-[17px] font-normal leading-none tracking-[-0.374px] text-on-primary transition-[background-color,transform] hover:bg-primary-focus active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-focus"
+      className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium leading-none text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       type="submit"
     >
       {children}
@@ -291,7 +343,7 @@ export function PrimaryButton({ children }: { children: ReactNode }) {
 export function IconTextButton({ children }: { children: ReactNode }) {
   return (
     <button
-      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary bg-canvas px-[18px] text-[17px] font-normal leading-none tracking-[-0.374px] text-primary transition-[background-color,transform] hover:bg-surface-pearl active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-focus"
+      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium leading-none text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       type="submit"
     >
       {children}
@@ -311,8 +363,8 @@ export function FilterChip({
   return (
     <Link
       className={cx(
-        "inline-flex min-h-[38px] items-center gap-2 rounded-full border border-hairline bg-canvas px-4 text-sm font-normal tracking-[-0.224px] text-primary transition-[background-color,transform] hover:bg-surface-pearl active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-focus",
-        active && "border-primary bg-primary text-on-primary hover:bg-primary",
+        "inline-flex min-h-10 items-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        active && "border-primary bg-primary text-primary-foreground hover:bg-primary/90",
       )}
       href={href}
     >
@@ -333,7 +385,7 @@ export function PagerLink({
   return (
     <Link
       className={cx(
-        "inline-flex min-h-[38px] items-center gap-2 rounded-full border border-primary bg-canvas px-4 text-sm font-normal tracking-[-0.224px] text-primary transition-[background-color,transform] hover:bg-surface-pearl active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-focus",
+        "inline-flex min-h-10 items-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         disabled && "pointer-events-none opacity-45",
       )}
       href={href}
@@ -354,14 +406,14 @@ export function FieldGroup({
 }) {
   return (
     <label className={cx("grid gap-[7px]", wide && "col-span-full")}>
-      <span className="text-[13px] leading-[1.43] tracking-[-0.224px] text-ink-muted-48">{label}</span>
+      <span className="text-xs font-medium leading-5 text-muted-foreground">{label}</span>
       {children}
     </label>
   );
 }
 
 const fieldClass =
-  "min-h-11 w-full rounded-full border border-hairline bg-canvas px-4 py-2.5 text-[17px] leading-[1.47] tracking-[-0.374px] text-ink outline-none transition-colors focus:border-primary-focus focus:ring-2 focus:ring-primary-focus/15";
+  "min-h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
 export function LabeledInput({
   label,
@@ -370,6 +422,7 @@ export function LabeledInput({
   defaultValue,
   placeholder,
   min,
+  step,
   required,
 }: {
   label: string;
@@ -378,6 +431,7 @@ export function LabeledInput({
   defaultValue?: string;
   placeholder?: string;
   min?: string;
+  step?: string;
   required?: boolean;
 }) {
   return (
@@ -389,6 +443,7 @@ export function LabeledInput({
         defaultValue={defaultValue}
         placeholder={placeholder}
         min={min}
+        step={step}
         required={required}
       />
     </FieldGroup>
@@ -407,7 +462,7 @@ export function LabeledTextarea({
   return (
     <FieldGroup label={label} wide>
       <textarea
-        className={cx(fieldClass, "min-h-[128px] resize-y rounded-[18px] font-mono text-xs leading-relaxed")}
+        className={cx(fieldClass, "min-h-[128px] resize-y font-mono text-xs leading-relaxed")}
         name={name}
         placeholder={placeholder}
         rows={5}

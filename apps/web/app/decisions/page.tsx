@@ -21,6 +21,7 @@ import {
   FilterChip,
   JsonDetails,
   MetricCard,
+  MetricCardGroup,
   Notice,
   PageHeader,
   PagerLink,
@@ -127,18 +128,20 @@ export default async function DecisionsPage({
       />
 
       <section className="grid grid-cols-3 gap-4 max-lg:grid-cols-1" aria-label="Resumo das decisões carregadas">
-        <MetricCard
-          label="Última decisão"
-          value={latest ? decisionMeta(latest.decision).label : "sem decisão"}
-          detail={latest ? `${formatDateTime(latest.decided_at)} · ${latest.reason}` : "Aguardando ciclo auditável"}
-          tone={latest ? decisionMeta(latest.decision).tone : "warning"}
-        />
-        <MetricCard
-          label="Ciclos carregados"
-          value={String(decisions.length)}
-          detail={activeDecision ? `Filtro ${decisionMeta(activeDecision).label}` : "Filtro atual: todas as decisões"}
-          tone="neutral"
-        />
+        <MetricCardGroup className="lg:col-span-2" aria-label="Indicadores de decisões">
+          <MetricCard
+            label="Última decisão"
+            value={latest ? decisionMeta(latest.decision).label : "sem decisão"}
+            detail={latest ? `${formatDateTime(latest.decided_at)} · ${latest.reason}` : "Aguardando ciclo auditável"}
+            tone={latest ? decisionMeta(latest.decision).tone : "warning"}
+          />
+          <MetricCard
+            label="Ciclos carregados"
+            value={String(decisions.length)}
+            detail={activeDecision ? `Filtro ${decisionMeta(activeDecision).label}` : "Filtro atual: todas as decisões"}
+            tone="neutral"
+          />
+        </MetricCardGroup>
         <Panel className="grid content-between gap-3">
           <span className="text-sm font-medium leading-tight text-muted-foreground">Distribuição do lote</span>
           <div className="grid grid-cols-2 gap-2">

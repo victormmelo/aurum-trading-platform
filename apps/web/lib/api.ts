@@ -1,4 +1,7 @@
-export const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export const serverApiUrl =
+  process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export const publicApiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export const apiUrl = serverApiUrl;
 export const appEnv = process.env.NEXT_PUBLIC_APP_ENV ?? "development";
 
 export type ApiResult<T> =
@@ -22,6 +25,13 @@ export type BotStatus = {
   paused_at: string | null;
   emergency_stopped_at: string | null;
   reason: string | null;
+};
+
+export type HealthStatus = {
+  status: string;
+  service: string;
+  environment: string;
+  version: string;
 };
 
 export type MarketSummary = {
@@ -77,22 +87,52 @@ export type PortfolioStatus = {
   } | null;
 };
 
+export type PortfolioReconciliationResponse = {
+  environment: string;
+  symbol: string;
+  snapshot: NonNullable<PortfolioStatus["snapshot"]>;
+  position: NonNullable<PortfolioStatus["position"]>;
+};
+
 export type Order = {
   id: string;
+  environment?: string;
+  exchange?: string;
+  symbol?: string;
+  decision_id?: string | null;
+  bot_run_id?: string | null;
+  external_order_id?: string | null;
+  client_order_id?: string | null;
   side: string;
   status: string;
+  order_type?: string;
+  position_side?: string;
   requested_quantity: string;
   executed_quantity: string;
   quote_quantity: string | null;
+  limit_price?: string | null;
   average_price: string | null;
   submitted_at: string | null;
   closed_at: string | null;
+  raw_payload?: Record<string, unknown>;
 };
 
 export type OrdersResponse = {
   environment: string;
   symbol: string;
   orders: Order[];
+};
+
+export type ManualOrderResponse = {
+  environment: string;
+  symbol: string;
+  order: Order;
+};
+
+export type OrderReconciliationResponse = {
+  environment: string;
+  symbol: string;
+  reconciled_orders: Order[];
 };
 
 export type FillsResponse = {
@@ -208,7 +248,7 @@ export type McpAccessLogsResponse = {
 
 export async function fetchApi<T>(path: string): Promise<ApiResult<T>> {
   try {
-    const response = await fetch(`${apiUrl}${path}`, { cache: "no-store" });
+    const response = await fetch(`${serverApiUrl}${path}`, { cache: "no-store" });
     if (!response.ok) {
       return { ok: false, error: `${response.status} ${response.statusText}`, data: null };
     }
@@ -224,14 +264,19 @@ export async function fetchApi<T>(path: string): Promise<ApiResult<T>> {
 
 export async function postApi<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
   try {
-    const response = await fetch(`${apiUrl}${path}`, {
+    const response = await fetch(`${serverApiUrl}${path}`, {
       method: "POST",
       headers: body === undefined ? undefined : { "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
       cache: "no-store",
     });
     if (!response.ok) {
-      return { ok: false, error: `${response.status} ${response.statusText}`, data: null };
+      const detail = await responseErrorDetail(response);
+      return {
+        ok: false,
+        error: detail || `${response.status} ${response.statusText}`,
+        data: null,
+      };
     }
     return { ok: true, data: (await response.json()) as T };
   } catch (error) {
@@ -241,6 +286,24 @@ export async function postApi<T>(path: string, body?: unknown): Promise<ApiResul
       data: null,
     };
   }
+}
+
+async function responseErrorDetail(response: Response) {
+  try {
+    const payload = (await response.json()) as unknown;
+    if (payload && typeof payload === "object" && "detail" in payload) {
+      const detail = (payload as { detail?: unknown }).detail;
+      if (typeof detail === "string") return detail;
+      if (detail && typeof detail === "object" && "reason" in detail) {
+        const reason = (detail as { reason?: unknown }).reason;
+        if (typeof reason === "string") return reason;
+      }
+      return JSON.stringify(detail);
+    }
+  } catch {
+    return "";
+  }
+  return "";
 }
 
 export async function getMcpData() {
@@ -270,6 +333,7 @@ export type ExportJob = {
 
 export async function getDashboardData() {
   const [
+    health,
     bot,
     market,
     portfolio,
@@ -279,6 +343,7 @@ export async function getDashboardData() {
     strategyConfig,
     riskConfig,
   ] = await Promise.all([
+    fetchApi<HealthStatus>("/health"),
     fetchApi<BotStatus>("/bot/status"),
     fetchApi<MarketSummary>("/market/summary"),
     fetchApi<PortfolioStatus>("/portfolio/status"),
@@ -289,7 +354,7 @@ export async function getDashboardData() {
     fetchApi<RiskConfig>("/configs/risk/active"),
   ]);
 
-  return { bot, market, portfolio, orders, fills, decisions, strategyConfig, riskConfig };
+  return { health, bot, market, portfolio, orders, fills, decisions, strategyConfig, riskConfig };
 }
 
 export type StrategyConfigItem = {
@@ -339,14 +404,17 @@ export type RiskConfigsResponse = {
 };
 
 export async function getConfigsData() {
-  const [strategyConfigs, riskConfigs, activeStrategy, activeRisk] = await Promise.all([
+  const [strategyConfigs, riskConfigs, activeStrategy, activeRisk, bot, market, portfolio] = await Promise.all([
     fetchApi<StrategyConfigsResponse>("/configs/strategy"),
     fetchApi<RiskConfigsResponse>("/configs/risk"),
     fetchApi<StrategyConfigItem | null>("/configs/strategy/active"),
     fetchApi<RiskConfigItem | null>("/configs/risk/active"),
+    fetchApi<BotStatus>("/bot/status"),
+    fetchApi<MarketSummary>("/market/summary"),
+    fetchApi<PortfolioStatus>("/portfolio/status"),
   ]);
 
-  return { strategyConfigs, riskConfigs, activeStrategy, activeRisk };
+  return { strategyConfigs, riskConfigs, activeStrategy, activeRisk, bot, market, portfolio };
 }
 
 export function formatMoney(value: string | null | undefined, currency = "USDT") {

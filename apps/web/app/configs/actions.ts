@@ -45,6 +45,46 @@ export async function createRiskConfig(formData: FormData) {
   finishMutation(result, "configuracao de risco criada");
 }
 
+export async function createGuidedRobotConfig(formData: FormData) {
+  const strategyVersion = requiredInteger(formData, "strategy_version");
+  const riskVersion = requiredInteger(formData, "risk_version");
+
+  const strategyPayload = {
+    version: strategyVersion,
+    name: `Rompimento com tendencia v${strategyVersion}`,
+    signal_timeframe: textValue(formData, "decision_period", "1h"),
+    regime_timeframe_primary: textValue(formData, "trend_confirmation", "4h"),
+    regime_timeframe_secondary: textValue(formData, "major_trend", "1d"),
+    parameters: {},
+    created_by: "operator",
+  };
+  const riskPayload = {
+    version: riskVersion,
+    name: `Risco conservador v${riskVersion}`,
+    risk_per_trade_pct: nullableText(formData, "risk_per_trade_pct") ?? "1",
+    daily_loss_limit_pct: nullableText(formData, "daily_loss_limit_pct") ?? "2",
+    max_exposure_pct: nullableText(formData, "max_exposure_pct") ?? "50",
+    parameters: {},
+    created_by: "operator",
+  };
+
+  const strategyResult = await postApi<StrategyConfigItem>("/configs/strategy", strategyPayload);
+  if (!strategyResult.ok) redirectWithError(strategyResult.error);
+
+  const riskResult = await postApi<RiskConfigItem>("/configs/risk", riskPayload);
+  if (!riskResult.ok) redirectWithError(riskResult.error);
+
+  const strategyActivation = await postApi<StrategyConfigItem>(
+    `/configs/strategy/${strategyResult.data.id}/activate`,
+  );
+  if (!strategyActivation.ok) redirectWithError(strategyActivation.error);
+
+  const riskActivation = await postApi<RiskConfigItem>(
+    `/configs/risk/${riskResult.data.id}/activate`,
+  );
+  finishMutation(riskActivation, "robo configurado com estrategia e risco ativos");
+}
+
 async function activateConfig(kind: ConfigKind, formData: FormData) {
   const id = textValue(formData, "id", "");
   if (!id) redirectWithError("configuracao invalida");
