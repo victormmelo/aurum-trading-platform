@@ -2,7 +2,11 @@
 
 Aurum is an operational platform for observing, controlling, and auditing an autonomous BTCUSDT trading robot. The MVP targets Binance Spot Testnet, long-only operation, and a progressive path through local development, paper trading, Testnet validation, and only later controlled Mainnet usage.
 
-The first cycles create the project foundation: FastAPI backend, Next.js frontend, PostgreSQL, Redis, Docker Compose, Binance read-only market data, the initial operational schema, strategy components, and a dry-run worker cycle. The worker records auditable bot runs and decisions, but it does not submit orders to Binance or require trading credentials.
+The current MVP foundation includes FastAPI backend, Next.js frontend,
+PostgreSQL, Redis, Docker Compose, Binance market data, strategy components,
+MCP read-only surfaces, and a worker that can run in paper mode or Binance Spot
+Testnet mode. Testnet execution is restricted to BTCUSDT, long-only Spot orders,
+with Mainnet explicitly blocked.
 
 ## Monorepo layout
 
@@ -24,7 +28,10 @@ scripts/         Local helper scripts
 - `web`: Next.js operational dashboard with mocked BTCUSDT/Testnet data.
 - `postgres`: PostgreSQL 16 for future transactional data.
 - `redis`: Redis for future cache, queues, locks, and rate limits.
-- `worker`: dry-run trading cycle that persists `bot_runs` and `decision_logs`.
+- `worker`: continuous market reader plus trading cycle. It refreshes
+  candles/snapshots, reconciles Binance Spot Testnet portfolio balances when
+  credentials are configured, publishes market events, and only runs decision
+  cycles when the robot is `running`.
 - `mcp-server`: placeholder for read-only agent access.
 
 ## Local setup
@@ -34,6 +41,20 @@ scripts/         Local helper scripts
 ```bash
 cp .env.example .env
 ```
+
+For real Binance Spot Testnet execution, create Spot Testnet API credentials in
+Binance's testnet environment and set only local environment values:
+
+```bash
+BINANCE_API_KEY=...
+BINANCE_API_SECRET=...
+BINANCE_SPOT_BASE_URL=https://testnet.binance.vision/api/v3
+AURUM_ENVIRONMENT=testnet
+TRADING_SYMBOL=BTCUSDT
+```
+
+Do not commit real keys. Mainnet URLs and Mainnet execution remain outside the
+MVP.
 
 2. Run with Docker Compose:
 
@@ -59,19 +80,37 @@ pytest
 uvicorn app.main:app --reload
 ```
 
-Import initial BTCUSDT candles after PostgreSQL migrations are applied:
+The Docker Compose worker imports BTCUSDT candles and creates market snapshots
+automatically. To backfill manually during local development:
 
 ```bash
 aurum-import-candles --interval 1h --interval 4h --interval 1d --limit 500
 ```
 
-Run one dry-run worker cycle after migrations, configs, runtime state, market data, and a portfolio snapshot exist:
+Run the continuous worker locally after migrations and service dependencies are
+available:
 
 ```bash
 cd apps/api
 . .venv/bin/activate
 python ../../services/worker/main.py
 ```
+
+Private Testnet operations:
+
+```bash
+curl -fsS -X POST http://localhost:8000/portfolio/reconcile
+curl -fsS -X POST http://localhost:8000/operations/manual-order \
+  -H 'content-type: application/json' \
+  -d '{"side":"BUY","quote_quantity":"25","reason":"manual testnet validation"}'
+curl -fsS -X POST http://localhost:8000/operations/reconcile
+```
+
+Manual orders and robot orders use the same `OrderService`, risk checks, audit
+log, persistence in `orders`/`order_fills`, and Binance Testnet adapter.
+The same private Testnet flows are also exposed in the dashboard: `/portfolio`
+has a reconcile action and `/operations` has manual order and order
+reconciliation controls.
 
 Collect Testnet validation evidence without mutating service state:
 
@@ -110,11 +149,15 @@ Frontend implementation standards:
 
 ## Agent workflow
 
-Agents working on this repository should follow [AGENTS.md](AGENTS.md). The Slack Canvas is the central project documentation, the [frontend Apple Canvas](https://rvxsolutions.slack.com/docs/T0B4MRY2N8Y/F0B460FPCEB) is the durable visual decision, Linear is the source of task execution state, and frontend work should align with `DESIGN.md`, the `npx getdesign@latest add apple` design direction, TailwindCSS, and reusable components in `apps/web/components`.
+Agents working on this repository should follow [AGENTS.md](AGENTS.md). The
+Slack Canvas is the central project documentation, the frontend visual
+governance Canvas is the durable UI decision, Linear is the source of task
+execution state, and frontend work should align with `DESIGN.md`, TailwindCSS,
+and reusable components in `apps/web/components`.
 
 ## Safety assumptions
 
 - No real Binance credential belongs in this repository.
-- Mainnet is out of scope for this foundation cycle.
-- The MVP starts with BTCUSDT, Binance Spot Testnet, and long-only behavior.
+- Mainnet is out of scope and is explicitly blocked by the execution adapter.
+- The MVP is BTCUSDT, Binance Spot Testnet, and long-only Spot behavior.
 - Agents and MCP access are read-only until explicit future authorization, audit, and scope controls exist.

@@ -7,12 +7,15 @@ import pytest
 
 from app.bot.control import (
     BOT_ACTION_EMERGENCY_STOP,
+    BOT_ACTION_INITIALIZE,
     BOT_ACTION_PAUSE,
     BOT_ACTION_RESUME,
+    DEFAULT_INITIALIZE_REASON,
     BotRuntimeStateConflictError,
     BotRuntimeStateNotFoundError,
     emergency_stop_bot,
     get_bot_status,
+    initialize_bot,
     pause_bot,
     resume_bot,
 )
@@ -38,6 +41,60 @@ def test_get_bot_status_raises_when_runtime_state_is_missing() -> None:
 
     with pytest.raises(BotRuntimeStateNotFoundError):
         get_bot_status(store, environment="testnet")
+
+
+def test_initialize_bot_creates_paused_runtime_state_and_writes_audit_log() -> None:
+    store = FakeBotControlStore(None)
+
+    status = initialize_bot(
+        store,
+        environment="testnet",
+        symbol="BTCUSDT",
+        trading_mode="testnet",
+        now=NOW,
+    )
+
+    assert status.environment == "testnet"
+    assert status.symbol == "BTCUSDT"
+    assert status.trading_mode == "testnet"
+    assert status.status == "paused"
+    assert status.paused_at == NOW
+    assert status.reason == DEFAULT_INITIALIZE_REASON
+    assert store.runtime is not None
+    assert store.commits == 1
+    assert store.audit_logs[0]["action"] == BOT_ACTION_INITIALIZE
+    assert store.audit_logs[0]["metadata_payload"] == {
+        "previous_state": None,
+        "new_state": {
+            "status": "paused",
+            "trading_mode": "testnet",
+            "symbol": "BTCUSDT",
+            "last_cycle_at": None,
+            "paused_at": NOW.isoformat(),
+            "emergency_stopped_at": None,
+            "reason": DEFAULT_INITIALIZE_REASON,
+        },
+        "reason": DEFAULT_INITIALIZE_REASON,
+    }
+
+
+def test_initialize_bot_returns_existing_runtime_without_resetting_state() -> None:
+    runtime = _runtime(status="running")
+    store = FakeBotControlStore(runtime)
+
+    status = initialize_bot(
+        store,
+        environment="testnet",
+        symbol="BTCUSDT",
+        trading_mode="testnet",
+        reason="ignored",
+        now=NOW,
+    )
+
+    assert status.status == "running"
+    assert store.runtime is runtime
+    assert store.audit_logs == []
+    assert store.commits == 0
 
 
 def test_pause_bot_updates_state_and_writes_audit_log() -> None:
@@ -136,6 +193,9 @@ class FakeBotControlStore:
 
     def get_runtime_state(self, *, environment: str) -> BotRuntimeState | None:
         return self.runtime if self.runtime and self.runtime.environment == environment else None
+
+    def add_runtime_state(self, runtime: BotRuntimeState) -> None:
+        self.runtime = runtime
 
     def save_audit_log(
         self,

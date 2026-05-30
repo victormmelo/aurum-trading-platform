@@ -2,19 +2,24 @@ from __future__ import annotations
 
 from typing import Annotated, Literal, Protocol
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
 from app.core.schemas import (
+    ManualOrderRequest,
+    OrderActionResponse,
     OrderFillResponse,
     OrderFillsResponse,
+    OrderReconciliationResponse,
     OrderResponse,
     OrdersResponse,
 )
 from app.db.models import Order, OrderFill
 from app.db.session import get_db_session
+from app.execution.factory import execution_adapter_for_mode
+from app.execution.service import OrderCommand, OrderService, OrderValidationError
 
 router = APIRouter(prefix="/operations", tags=["operations"])
 
@@ -122,6 +127,67 @@ def operation_fills(
     )
 
 
+@router.post("/manual-order", response_model=OrderActionResponse)
+def manual_order(
+    request: ManualOrderRequest,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> OrderActionResponse:
+    settings = get_settings()
+    try:
+        service = _order_service(session, trading_mode="testnet")
+        order = service.place_order(
+            OrderCommand(
+                environment=settings.aurum_environment,
+                symbol=settings.trading_symbol,
+                side=request.side,
+                quantity=request.quantity,
+                quote_quantity=request.quote_quantity,
+                actor_type="manual",
+                actor_id=request.actor_id,
+                reason=request.reason,
+            )
+        )
+        session.commit()
+    except OrderValidationError as exc:
+        session.commit()
+        raise HTTPException(
+            status_code=422,
+            detail={"code": exc.code, "reason": exc.reason},
+        ) from exc
+    except RuntimeError as exc:
+        session.rollback()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return OrderActionResponse(
+        environment=settings.aurum_environment,
+        symbol=settings.trading_symbol,
+        order=OrderResponse.model_validate(order, from_attributes=True),
+    )
+
+
+@router.post("/reconcile", response_model=OrderReconciliationResponse)
+def reconcile_orders(
+    session: Annotated[Session, Depends(get_db_session)],
+) -> OrderReconciliationResponse:
+    settings = get_settings()
+    try:
+        service = _order_service(session, trading_mode="testnet")
+        orders = service.reconcile_open_orders(
+            environment=settings.aurum_environment,
+            symbol=settings.trading_symbol,
+        )
+        session.commit()
+    except RuntimeError as exc:
+        session.rollback()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return OrderReconciliationResponse(
+        environment=settings.aurum_environment,
+        symbol=settings.trading_symbol,
+        reconciled_orders=[
+            OrderResponse.model_validate(order, from_attributes=True) for order in orders
+        ],
+    )
+
+
 def get_orders(
     store: OperationsReadStore,
     *,
@@ -175,4 +241,15 @@ def _fill_response(fill: OrderFill) -> OrderFillResponse:
         fee_asset=fill.fee_asset,
         fee_estimated_usdt=fill.fee_estimated_usdt,
         raw_payload=fill.raw_payload,
+    )
+
+
+def _order_service(session: Session, *, trading_mode: str) -> OrderService:
+    settings = get_settings()
+    return OrderService(
+        session=session,
+        adapter=execution_adapter_for_mode(settings, trading_mode),
+        expected_environment=settings.aurum_environment,
+        expected_symbol=settings.trading_symbol,
+        stale_after_seconds=settings.market_stale_after_seconds,
     )

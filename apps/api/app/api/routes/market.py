@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+from collections.abc import AsyncIterator
 from typing import Annotated, Literal, Protocol
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
+from redis import asyncio as aioredis
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -14,11 +18,13 @@ from app.core.schemas import (
     MarketSummaryResponse,
 )
 from app.db.models import MarketCandle, MarketSnapshot
-from app.db.session import get_db_session
+from app.db.session import get_db_session, get_session_factory
 
 router = APIRouter(prefix="/market", tags=["market"])
 
 MarketInterval = Literal["1h", "4h", "1d"]
+MARKET_CHANNEL = "aurum:market:snapshots"
+HEARTBEAT_SECONDS = 15
 
 
 class MarketReadStore(Protocol):
@@ -94,6 +100,19 @@ def market_candles(
     )
 
 
+@router.get("/stream")
+async def market_stream() -> StreamingResponse:
+    return StreamingResponse(
+        _market_event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 def get_market_summary(
     store: MarketReadStore, *, environment: str, symbol: str
 ) -> MarketSummaryResponse:
@@ -124,3 +143,47 @@ def get_market_candles(
 
 def _snapshot_response(snapshot: MarketSnapshot) -> MarketSnapshotSummary:
     return MarketSnapshotSummary.model_validate(snapshot, from_attributes=True)
+
+
+async def _market_event_stream() -> AsyncIterator[str]:
+    settings = get_settings()
+    yield _sse("snapshot", _latest_summary_json())
+
+    redis_client = aioredis.from_url(settings.redis_url, decode_responses=True)
+    pubsub = redis_client.pubsub()
+    try:
+        await pubsub.subscribe(MARKET_CHANNEL)
+        while True:
+            message = await pubsub.get_message(
+                ignore_subscribe_messages=True,
+                timeout=HEARTBEAT_SECONDS,
+            )
+            if message is None:
+                yield _sse("heartbeat", "{}")
+                continue
+            yield _sse("snapshot", _latest_summary_json())
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        while True:
+            yield _sse("snapshot", _latest_summary_json())
+            await asyncio.sleep(HEARTBEAT_SECONDS)
+    finally:
+        await pubsub.close()
+        await redis_client.aclose()
+
+
+def _latest_summary_json() -> str:
+    settings = get_settings()
+    session_factory = get_session_factory()
+    with session_factory() as session:
+        summary = get_market_summary(
+            SqlAlchemyMarketReadStore(session),
+            environment=settings.aurum_environment,
+            symbol=settings.trading_symbol,
+        )
+    return summary.model_dump_json()
+
+
+def _sse(event: str, data: str) -> str:
+    return f"event: {event}\ndata: {data}\n\n"

@@ -49,6 +49,26 @@ def test_get_bot_status_endpoint_returns_404(monkeypatch) -> None:  # noqa: ANN0
     assert response.json() == {"detail": "missing"}
 
 
+def test_initialize_endpoint_returns_status(monkeypatch) -> None:  # noqa: ANN001
+    client = _client()
+
+    def initialize(store, environment, symbol, trading_mode, reason):  # noqa: ANN001
+        assert environment == "testnet"
+        assert symbol == "BTCUSDT"
+        assert trading_mode == "testnet"
+        assert reason == "setup inicial"
+        return _status(status="paused", paused_at=NOW, reason=reason)
+
+    monkeypatch.setattr(bot_routes, "initialize_bot", initialize)
+
+    response = client.post("/bot/initialize", json={"reason": "setup inicial"})
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "paused"
+    assert response.json()["paused_at"] == "2026-05-17T20:00:00Z"
+    assert response.json()["reason"] == "setup inicial"
+
+
 def test_pause_endpoint_returns_status(monkeypatch) -> None:  # noqa: ANN001
     client = _client()
 

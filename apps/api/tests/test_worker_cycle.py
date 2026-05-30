@@ -160,6 +160,78 @@ def test_worker_cycle_persists_buy_decision_in_dry_run(monkeypatch) -> None:  # 
     assert decision.market_snapshot_id == store.market_snapshots[0].id
 
 
+def test_worker_cycle_executes_allowed_testnet_buy_with_order_service(monkeypatch) -> None:  # noqa: ANN001
+    store = FakeStore(
+        runtime=BotRuntimeState(
+            environment="testnet",
+            status="running",
+            trading_mode="testnet",
+        ),
+        strategy_config=_strategy_config(),
+        risk_config=_risk_config(),
+        portfolio=_portfolio_snapshot(),
+        candles_by_interval={"1h": [_candle()], "4h": [_candle()]},
+    )
+    order_service = FakeOrderService()
+
+    monkeypatch.setattr(cycle, "compute_indicator_snapshot", lambda candles: _snapshot())
+    monkeypatch.setattr(
+        cycle,
+        "evaluate_regime",
+        lambda snapshot: RegimeResult(True, "Regime permitido", {"code": "regime_allowed"}),
+    )
+    monkeypatch.setattr(
+        cycle,
+        "evaluate_breakout_entry_signal",
+        lambda snapshot, regime: SignalResult(
+            "COMPRA",
+            "Breakout confirmado",
+            {"code": "breakout_entry"},
+        ),
+    )
+    monkeypatch.setattr(
+        cycle,
+        "calculate_position_size",
+        lambda sizing_input, config: PositionSizingResult(
+            quantity=Decimal("0.05"),
+            notional=Decimal("500"),
+            reason="Sizing calculado",
+            reason_payload={"code": "position_size_calculated"},
+        ),
+    )
+    monkeypatch.setattr(
+        cycle,
+        "evaluate_risk",
+        lambda candidate, state, config: RiskResult(
+            True,
+            candidate.decision,
+            "Risco permite nova compra",
+            {"code": "risk_allowed"},
+        ),
+    )
+
+    result = run_dry_run_cycle(
+        store,
+        environment="testnet",
+        symbol="BTCUSDT",
+        now=NOW,
+        order_service=order_service,
+    )
+
+    assert result.status == "completed"
+    assert len(order_service.commands) == 1
+    assert order_service.commands[0].actor_type == "robot"
+    assert order_service.commands[0].quote_quantity == Decimal("500")
+    assert store.decisions[0].execution_result == {
+        "execution_mode": "binance_testnet",
+        "trading_mode": "testnet",
+        "status": "sent",
+        "order_id": str(order_service.order.id),
+        "external_order_id": "12345",
+        "order_status": "FILLED",
+    }
+
+
 def test_worker_cycle_marks_run_failed_when_cycle_raises() -> None:
     store = FakeStore(runtime_error=RuntimeError("boom"))
 
@@ -303,6 +375,25 @@ class FakeStore:
 
     def commit(self) -> None:
         self.commits += 1
+
+
+class FakeOrderService:
+    def __init__(self) -> None:
+        self.commands = []
+        self.order = type(
+            "OrderResult",
+            (),
+            {
+                "id": uuid.uuid4(),
+                "external_order_id": "12345",
+                "status": "FILLED",
+            },
+        )()
+
+    def place_order(self, command, *, now):  # noqa: ANN001, ANN201
+        self.commands.append(command)
+        self.now = now
+        return self.order
 
 
 def _strategy_config() -> StrategyConfig:

@@ -25,6 +25,8 @@ from app.db.models import (
 from app.db.models import (
     StrategyConfig as StrategyConfigModel,
 )
+from app.execution.factory import execution_adapter_for_mode
+from app.execution.service import OrderCommand, OrderService, OrderValidationError
 from app.strategy.exits import evaluate_exit_signal
 from app.strategy.indicators import compute_indicator_snapshot
 from app.strategy.regime import evaluate_regime
@@ -271,11 +273,25 @@ def run_worker_cycle(
     symbol: str = "BTCUSDT",
     now: datetime | None = None,
 ) -> CycleResult:
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    runtime = SqlAlchemyCycleStore(session).get_runtime_state(environment=environment)
+    order_service = None
+    if runtime is not None and runtime.trading_mode in {"testnet", "mainnet"}:
+        order_service = OrderService(
+            session=session,
+            adapter=execution_adapter_for_mode(settings, runtime.trading_mode),
+            expected_environment=settings.aurum_environment,
+            expected_symbol=settings.trading_symbol,
+            stale_after_seconds=settings.market_stale_after_seconds,
+        )
     return run_dry_run_cycle(
         SqlAlchemyCycleStore(session),
         environment=environment,
         symbol=symbol,
         now=now,
+        order_service=order_service,
     )
 
 
@@ -285,6 +301,7 @@ def run_dry_run_cycle(
     environment: str,
     symbol: str,
     now: datetime | None = None,
+    order_service: OrderService | None = None,
 ) -> CycleResult:
     started_at = now or datetime.now(UTC)
     bot_run = store.begin_run(environment=environment, symbol=symbol, started_at=started_at)
@@ -311,6 +328,14 @@ def run_dry_run_cycle(
             bot_run.risk_config_id = risk_config.id
 
         decision_log = store.save_decision(bot_run=bot_run, **decision_context)
+        if order_service is not None:
+            _execute_decision_order(
+                order_service,
+                bot_run=bot_run,
+                decision_log=decision_log,
+                trading_mode=trading_mode,
+                now=started_at,
+            )
         finished_at = now or datetime.now(UTC)
         store.complete_run(bot_run, finished_at=finished_at)
 
@@ -632,6 +657,70 @@ def _decision_payload(
             "reason": "no_order_intended",
         },
     }
+
+
+def _execute_decision_order(
+    order_service: OrderService,
+    *,
+    bot_run: BotRun,
+    decision_log: DecisionLog,
+    trading_mode: str,
+    now: datetime,
+) -> None:
+    intended_order = decision_log.intended_order or {}
+    if not intended_order or decision_log.decision not in {BUY, SELL}:
+        return
+    if trading_mode != "testnet":
+        decision_log.execution_result = {
+            **(decision_log.execution_result or {}),
+            "status": "blocked",
+            "reason": (
+                "mainnet_execution_blocked"
+                if trading_mode == "mainnet"
+                else "unsupported_mode"
+            ),
+        }
+        return
+    try:
+        order = order_service.place_order(
+            OrderCommand(
+                environment=decision_log.environment,
+                symbol=decision_log.symbol,
+                side=str(intended_order["side"]),
+                quantity=(
+                    Decimal(str(intended_order["quantity"]))
+                    if intended_order.get("quantity") is not None
+                    else None
+                ),
+                quote_quantity=(
+                    Decimal(str(intended_order["quote_quantity"]))
+                    if intended_order.get("quote_quantity") is not None
+                    else None
+                ),
+                actor_type="robot",
+                actor_id="aurum-worker",
+                decision=decision_log,
+                bot_run_id=bot_run.id,
+                reason=decision_log.reason,
+            ),
+            now=now,
+        )
+        decision_log.execution_result = {
+            "execution_mode": "binance_testnet",
+            "trading_mode": trading_mode,
+            "status": "sent",
+            "order_id": str(order.id),
+            "external_order_id": order.external_order_id,
+            "order_status": order.status,
+        }
+    except OrderValidationError as exc:
+        decision_log.execution_result = {
+            "execution_mode": "binance_testnet",
+            "trading_mode": trading_mode,
+            "status": "blocked",
+            "code": exc.code,
+            "reason": exc.reason,
+        }
 
 
 def _trading_mode(runtime: object) -> str:

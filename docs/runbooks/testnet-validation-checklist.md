@@ -12,14 +12,19 @@ the approved scope.
 - Binance integration uses Spot Testnet:
   `BINANCE_SPOT_BASE_URL=https://testnet.binance.vision/api/v3`.
 - The robot remains long-only, with no leverage and no Mainnet execution.
-- Worker cycles remain dry-run only. They may persist `bot_runs` and
-  `decision_logs`, but must not submit orders to Binance.
+- Worker cycles may run in paper mode or Testnet mode. Paper mode persists only
+  dry-run intents. Testnet mode may submit real Spot Testnet orders only through
+  the central `OrderService`.
+- Manual and robot orders must use the same validation, audit, persistence, and
+  reconciliation path.
 - MCP and agent access remain read-only unless a future issue explicitly adds
   scoped write behavior, rate limits, and audit controls.
 
 ## Prerequisites
 
 - `.env` exists and is based on `.env.example`.
+- `BINANCE_API_KEY` and `BINANCE_API_SECRET` are set locally only when validating
+  private Testnet account/order flows.
 - No real Binance API key, API secret, MCP token, production key, or operational
   secret is committed to the repository.
 - Docker Compose services for PostgreSQL, Redis, API, and any service under test
@@ -85,6 +90,67 @@ Acceptance criteria:
   endpoint itself must respond predictably.
 - MCP status and audit-log endpoints must not expose token secrets or hashes.
 
+Dashboard acceptance criteria:
+
+- `/portfolio` renders the latest Binance-backed wallet snapshot and exposes a
+  reconcile action backed by `POST /portfolio/reconcile`.
+- `/operations` renders orders/fills and exposes manual order and reconciliation
+  actions backed by `POST /operations/manual-order` and
+  `POST /operations/reconcile`.
+- Dashboard mutations must show success or failure feedback without exposing
+  Binance credentials.
+
+## Private Testnet validation
+
+Only run this section with Binance Spot Testnet credentials. The base URL must
+remain `https://testnet.binance.vision/api/v3`.
+
+Reconcile the Binance Spot Testnet account into Aurum:
+
+```bash
+curl -fsS -X POST "$API_URL/portfolio/reconcile"
+curl -fsS "$API_URL/portfolio/status"
+```
+
+Acceptance criteria:
+
+- The response reports `environment: testnet` and `symbol: BTCUSDT`.
+- `source_payload.source` is `binance_spot_testnet_account`.
+- BTC and USDT balances match the Binance Spot Testnet account at validation
+  time.
+- No secret values appear in the response or logs.
+
+Submit a small manual order after confirming the runtime state is `running`,
+active risk config exists, portfolio is reconciled, and market data is fresh:
+
+```bash
+curl -fsS -X POST "$API_URL/operations/manual-order" \
+  -H 'content-type: application/json' \
+  -d '{"side":"BUY","quote_quantity":"25","reason":"manual testnet validation"}'
+```
+
+Then reconcile open orders/fills:
+
+```bash
+curl -fsS -X POST "$API_URL/operations/reconcile"
+curl -fsS "$API_URL/operations/orders?limit=10"
+curl -fsS "$API_URL/operations/fills?limit=10"
+```
+
+Acceptance criteria:
+
+- Manual order is blocked unless runtime is `running`, environment is `testnet`,
+  symbol is `BTCUSDT`, market data is fresh, balance is sufficient, and risk
+  limits allow it.
+- Persisted order status is one of `NEW`, `PARTIALLY_FILLED`, `FILLED`,
+  `CANCELED`, `REJECTED`, or `EXPIRED`.
+- If Binance rejects or the signed submission fails after local validation, an
+  `orders` row with `status = 'REJECTED'` must remain available for audit.
+- Binance fills are persisted in `order_fills` when returned by Testnet.
+- `audit_logs` includes `order.submitted`, `order.blocked`, or
+  `order.rejected`, or `order.reconciled` events as applicable.
+- Mainnet remains blocked and no Mainnet URL appears in tracked source.
+
 ## Data validation
 
 Confirm imported candle coverage for Testnet BTCUSDT:
@@ -105,10 +171,11 @@ Acceptance criteria:
 - Every row is `environment = 'testnet'` and `symbol = 'BTCUSDT'`.
 - `latest_close` is recent enough for the validation window being tested.
 
-## Worker dry-run validation
+## Worker validation
 
 Run one worker cycle only after runtime state, active strategy config, active
-risk config, market candles, and portfolio state are present:
+risk config, market candles, fresh market snapshot, and portfolio state are
+present:
 
 ```bash
 cd apps/api
@@ -139,13 +206,15 @@ Acceptance criteria:
 
 - A `bot_runs` row is created for `environment = 'testnet'` and
   `symbol = 'BTCUSDT'`.
-- The run payload includes `execution_mode: dry_run`.
+- The run payload includes the active trading mode.
 - A `decision_logs` row is created for the run.
 - The decision is one of `COMPRA`, `VENDA`, `MANTER_POSICAO`, or `NAO_OPERAR`.
-- `execution_result.execution_mode` is `dry_run`.
-- `execution_result.status` is `not_sent`.
-- Any intended order remains an intent payload only; no Binance order submission
-  is expected in this MVP scope.
+- In paper mode, `execution_result.execution_mode` is `dry_run` and no Binance
+  order is submitted.
+- In Testnet mode, any allowed `COMPRA`/`VENDA` must create an `orders` row and
+  use `execution_result.execution_mode = binance_testnet`.
+- If execution is blocked, the decision log must explain the block code and
+  reason.
 
 ## Audit validation
 

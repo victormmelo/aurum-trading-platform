@@ -14,6 +14,13 @@ class Settings(BaseSettings):
         default="https://testnet.binance.vision/api/v3",
         alias="BINANCE_SPOT_BASE_URL",
     )
+    binance_api_key: str | None = Field(default=None, alias="BINANCE_API_KEY")
+    binance_api_secret: str | None = Field(default=None, alias="BINANCE_API_SECRET")
+    binance_recv_window_ms: int = Field(default=5000, alias="BINANCE_RECV_WINDOW_MS")
+    market_stale_after_seconds: int = Field(default=300, alias="MARKET_STALE_AFTER_SECONDS")
+    market_poll_seconds: int = Field(default=30, alias="MARKET_POLL_SECONDS")
+    worker_cycle_seconds: int = Field(default=60, alias="WORKER_CYCLE_SECONDS")
+    market_backfill_limit: int = Field(default=500, alias="MARKET_BACKFILL_LIMIT")
     database_url: str = Field(
         default="postgresql+psycopg://aurum:aurum_dev_password@localhost:5432/aurum",
         alias="DATABASE_URL",

@@ -55,9 +55,11 @@ services:
       context: .
       dockerfile: infra/docker/web.Dockerfile
       args:
+        API_URL: ${WEB_SERVER_API_URL:-http://api:8000}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
         NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV:-development}
     environment:
+      API_URL: ${WEB_SERVER_API_URL:-http://api:8000}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV:-development}
     ports:
@@ -74,8 +76,18 @@ services:
     env_file:
       - path: .env
         required: false
-    profiles: ["future"]
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      API_VERSION: ${API_VERSION:-0.1.0}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql+psycopg://aurum:aurum_dev_password@postgres:5432/aurum}
+      REDIS_URL: ${DOCKER_REDIS_URL:-redis://redis:6379/0}
+      MARKET_POLL_SECONDS: ${MARKET_POLL_SECONDS:-30}
+      WORKER_CYCLE_SECONDS: ${WORKER_CYCLE_SECONDS:-60}
+      MARKET_BACKFILL_LIMIT: ${MARKET_BACKFILL_LIMIT:-500}
+    restart: unless-stopped
     depends_on:
+      api:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:

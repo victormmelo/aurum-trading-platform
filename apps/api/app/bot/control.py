@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -10,9 +11,11 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditLog, BotRuntimeState
 
+BOT_ACTION_INITIALIZE = "bot.initialize"
 BOT_ACTION_PAUSE = "bot.pause"
 BOT_ACTION_RESUME = "bot.resume"
 BOT_ACTION_EMERGENCY_STOP = "bot.emergency_stop"
+DEFAULT_INITIALIZE_REASON = "Estado inicial aguardando validação operacional"
 
 
 class BotRuntimeStateNotFoundError(Exception):
@@ -38,6 +41,8 @@ class BotStatus:
 class BotControlStore(Protocol):
     def get_runtime_state(self, *, environment: str) -> BotRuntimeState | None: ...
 
+    def add_runtime_state(self, runtime: BotRuntimeState) -> None: ...
+
     def save_audit_log(
         self,
         *,
@@ -58,6 +63,9 @@ class SqlAlchemyBotControlStore:
     def get_runtime_state(self, *, environment: str) -> BotRuntimeState | None:
         statement = select(BotRuntimeState).where(BotRuntimeState.environment == environment)
         return self.session.scalars(statement).first()
+
+    def add_runtime_state(self, runtime: BotRuntimeState) -> None:
+        self.session.add(runtime)
 
     def save_audit_log(
         self,
@@ -87,6 +95,46 @@ class SqlAlchemyBotControlStore:
 
 def get_bot_status(store: BotControlStore, *, environment: str) -> BotStatus:
     runtime = _require_runtime(store, environment=environment)
+    return _to_status(runtime)
+
+
+def initialize_bot(
+    store: BotControlStore,
+    *,
+    environment: str,
+    symbol: str,
+    trading_mode: str,
+    reason: str | None = None,
+    now: datetime | None = None,
+) -> BotStatus:
+    existing = store.get_runtime_state(environment=environment)
+    if existing is not None:
+        return _to_status(existing)
+
+    occurred_at = now or datetime.now(UTC)
+    runtime = BotRuntimeState(
+        id=uuid.uuid4(),
+        environment=environment,
+        trading_mode=trading_mode,
+        symbol=symbol,
+        status="paused",
+        paused_at=occurred_at,
+        pause_reason=reason or DEFAULT_INITIALIZE_REASON,
+        state_payload={},
+    )
+    store.add_runtime_state(runtime)
+    store.save_audit_log(
+        environment=runtime.environment,
+        action=BOT_ACTION_INITIALIZE,
+        entity_id=runtime.id,
+        occurred_at=occurred_at,
+        metadata_payload={
+            "previous_state": None,
+            "new_state": _state_payload(runtime),
+            "reason": runtime.pause_reason,
+        },
+    )
+    store.commit()
     return _to_status(runtime)
 
 

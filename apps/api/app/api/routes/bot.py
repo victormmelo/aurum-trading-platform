@@ -12,6 +12,7 @@ from app.bot.control import (
     SqlAlchemyBotControlStore,
     emergency_stop_bot,
     get_bot_status,
+    initialize_bot,
     pause_bot,
     resume_bot,
 )
@@ -27,6 +28,14 @@ def _store(session: Session) -> BotControlStore:
 
 
 def _environment() -> str:
+    return get_settings().aurum_environment
+
+
+def _symbol() -> str:
+    return get_settings().trading_symbol
+
+
+def _trading_mode() -> str:
     return get_settings().aurum_environment
 
 
@@ -48,6 +57,22 @@ def bot_status(session: Annotated[Session, Depends(get_db_session)]) -> BotStatu
         return _response(get_bot_status(_store(session), environment=_environment()))
     except BotRuntimeStateNotFoundError as exc:
         raise _not_found_error(exc) from exc
+
+
+@router.post("/initialize", response_model=BotStatusResponse)
+def bot_initialize(
+    command: BotCommandRequest,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> BotStatusResponse:
+    return _response(
+        initialize_bot(
+            _store(session),
+            environment=_environment(),
+            symbol=_symbol(),
+            trading_mode=_trading_mode(),
+            reason=command.reason,
+        )
+    )
 
 
 @router.post("/pause", response_model=BotStatusResponse)

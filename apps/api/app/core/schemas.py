@@ -230,6 +230,33 @@ class OrderFillsResponse(BaseModel):
     fills: list[OrderFillResponse]
 
 
+class ManualOrderRequest(BaseModel):
+    side: Literal["BUY", "SELL"]
+    quantity: Decimal | None = Field(default=None, gt=0)
+    quote_quantity: Decimal | None = Field(default=None, gt=0)
+    reason: str | None = Field(default=None, max_length=500)
+    actor_id: str | None = Field(default="manual", max_length=120)
+
+
+class OrderActionResponse(BaseModel):
+    environment: str
+    symbol: str
+    order: OrderResponse
+
+
+class OrderReconciliationResponse(BaseModel):
+    environment: str
+    symbol: str
+    reconciled_orders: list[OrderResponse]
+
+
+class PortfolioReconciliationResponse(BaseModel):
+    environment: str
+    symbol: str
+    snapshot: PortfolioSnapshotResponse
+    position: PositionResponse
+
+
 class DecisionLogResponse(BaseModel):
     id: UUID
     environment: str

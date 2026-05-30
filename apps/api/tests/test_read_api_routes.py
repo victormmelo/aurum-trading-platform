@@ -90,6 +90,23 @@ def test_market_candles_rejects_unsupported_interval() -> None:
     assert response.status_code == 422
 
 
+def test_market_stream_endpoint_returns_sse_events(monkeypatch) -> None:  # noqa: ANN001
+    client = _client()
+
+    async def stream():  # noqa: ANN202
+        yield "event: snapshot\ndata: {}\n\n"
+        yield "event: heartbeat\ndata: {}\n\n"
+
+    monkeypatch.setattr(market_routes, "_market_event_stream", stream)
+
+    response = client.get("/market/stream")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert "event: snapshot" in response.text
+    assert "event: heartbeat" in response.text
+
+
 def test_portfolio_status_endpoint_returns_empty_state(monkeypatch) -> None:  # noqa: ANN001
     client = _client()
     original_get_portfolio_status = portfolio_routes.get_portfolio_status
@@ -264,6 +281,155 @@ def test_fills_endpoint_preserves_order_links(monkeypatch) -> None:  # noqa: ANN
     assert payload["fills"][0]["order_bot_run_id"] == str(bot_run_id)
 
 
+def test_manual_order_endpoint_returns_persisted_order(monkeypatch) -> None:  # noqa: ANN001
+    session = _FakeSession()
+    client = _client(session)
+    order_id = uuid.uuid4()
+
+    order = SimpleNamespace(
+        id=order_id,
+        environment="testnet",
+        exchange="binance",
+        symbol="BTCUSDT",
+        decision_id=None,
+        bot_run_id=None,
+        external_order_id="12345",
+        client_order_id="aurum-manual",
+        side="BUY",
+        order_type="MARKET",
+        status="FILLED",
+        position_side="LONG",
+        requested_quantity=Decimal("0"),
+        executed_quantity=Decimal("0.00025"),
+        quote_quantity=Decimal("25"),
+        limit_price=None,
+        average_price=Decimal("100000"),
+        submitted_at=NOW,
+        closed_at=NOW,
+        raw_payload={"adapter": "binance_testnet"},
+    )
+
+    monkeypatch.setattr(
+        operations_routes,
+        "_order_service",
+        lambda session, trading_mode: _FakeOrderService(order),
+    )
+
+    response = client.post(
+        "/operations/manual-order",
+        json={"side": "BUY", "quote_quantity": "25", "reason": "test"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["environment"] == "testnet"
+    assert payload["symbol"] == "BTCUSDT"
+    assert payload["order"]["id"] == str(order_id)
+    assert payload["order"]["status"] == "FILLED"
+    assert session.commits == 1
+
+
+def test_order_reconcile_endpoint_returns_updated_orders(monkeypatch) -> None:  # noqa: ANN001
+    session = _FakeSession()
+    client = _client(session)
+    order_id = uuid.uuid4()
+    order = SimpleNamespace(
+        id=order_id,
+        environment="testnet",
+        exchange="binance",
+        symbol="BTCUSDT",
+        decision_id=None,
+        bot_run_id=None,
+        external_order_id="12345",
+        client_order_id="aurum-manual",
+        side="BUY",
+        order_type="MARKET",
+        status="FILLED",
+        position_side="LONG",
+        requested_quantity=Decimal("0"),
+        executed_quantity=Decimal("0.00025"),
+        quote_quantity=Decimal("25"),
+        limit_price=None,
+        average_price=Decimal("100000"),
+        submitted_at=NOW,
+        closed_at=NOW,
+        raw_payload={},
+    )
+
+    monkeypatch.setattr(
+        operations_routes,
+        "_order_service",
+        lambda session, trading_mode: _FakeOrderService(order),
+    )
+
+    response = client.post("/operations/reconcile")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["reconciled_orders"][0]["id"] == str(order_id)
+    assert session.commits == 1
+
+
+def test_portfolio_reconcile_endpoint_returns_snapshot_and_position(monkeypatch) -> None:  # noqa: ANN001
+    session = _FakeSession()
+    client = _client(session)
+    snapshot_id = uuid.uuid4()
+    position_id = uuid.uuid4()
+    snapshot = SimpleNamespace(
+        id=snapshot_id,
+        captured_at=NOW,
+        usdt_balance=Decimal("500"),
+        btc_balance=Decimal("0.01"),
+        btc_market_price=Decimal("100000"),
+        btc_market_value=Decimal("1000"),
+        invested_value=Decimal("950"),
+        average_cost=Decimal("95000"),
+        total_equity=Decimal("1500"),
+        exposure_pct=Decimal("66.666667"),
+        realized_pnl=Decimal("0"),
+        unrealized_pnl=Decimal("50"),
+        total_fees_usdt=Decimal("0"),
+        source_payload={"source": "binance_spot_testnet_account"},
+    )
+    position = SimpleNamespace(
+        id=position_id,
+        asset="BTC",
+        side="LONG",
+        quantity=Decimal("0.01"),
+        average_cost=Decimal("95000"),
+        remaining_cost=Decimal("950"),
+        realized_pnl=Decimal("0"),
+        total_fees_usdt=Decimal("0"),
+        last_reconciled_at=NOW,
+    )
+
+    monkeypatch.setattr(
+        portfolio_routes,
+        "get_settings",
+        lambda: SimpleNamespace(
+            aurum_environment="testnet",
+            trading_symbol="BTCUSDT",
+            binance_spot_base_url="https://testnet.binance.vision/api/v3",
+            binance_api_key="key",
+            binance_api_secret="secret",
+            binance_recv_window_ms=5000,
+        ),
+    )
+    monkeypatch.setattr(
+        portfolio_routes,
+        "BinancePortfolioReconciler",
+        lambda client: _FakePortfolioReconciler(snapshot, position),
+    )
+
+    response = client.post("/portfolio/reconcile")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["snapshot"]["id"] == str(snapshot_id)
+    assert payload["position"]["id"] == str(position_id)
+    assert session.commits == 1
+
+
 def test_decisions_endpoint_passes_filter_and_preserves_links(monkeypatch) -> None:  # noqa: ANN001
     client = _client()
     bot_run_id = uuid.uuid4()
@@ -312,9 +478,9 @@ def test_decisions_endpoint_passes_filter_and_preserves_links(monkeypatch) -> No
     assert payload["decisions"][0]["market_snapshot_id"] == str(market_snapshot_id)
 
 
-def _client() -> TestClient:
+def _client(session: object | None = None) -> TestClient:
     app = create_app()
-    app.dependency_overrides[get_db_session] = lambda: object()
+    app.dependency_overrides[get_db_session] = lambda: session if session is not None else object()
     return TestClient(app)
 
 
@@ -381,3 +547,35 @@ class _DecisionsStore:
         decision: str | None,
     ) -> list[object]:
         return self.decisions
+
+
+class _FakeSession:
+    def __init__(self) -> None:
+        self.commits = 0
+        self.rollbacks = 0
+
+    def commit(self) -> None:
+        self.commits += 1
+
+    def rollback(self) -> None:
+        self.rollbacks += 1
+
+
+class _FakeOrderService:
+    def __init__(self, order: object) -> None:
+        self.order = order
+
+    def place_order(self, command, *, now=None):  # noqa: ANN001, ANN201, ARG002
+        return self.order
+
+    def reconcile_open_orders(self, *, environment, symbol):  # noqa: ANN001, ANN201, ARG002
+        return [self.order]
+
+
+class _FakePortfolioReconciler:
+    def __init__(self, snapshot: object, position: object) -> None:
+        self.snapshot = snapshot
+        self.position = position
+
+    def reconcile(self, session, *, environment, symbol):  # noqa: ANN001, ANN201, ARG002
+        return SimpleNamespace(snapshot=self.snapshot, position=self.position)

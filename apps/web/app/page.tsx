@@ -4,11 +4,7 @@ import {
   ArrowRight,
   Bot,
   CheckCircle2,
-  CirclePause,
-  CirclePlay,
   Database,
-  OctagonAlert,
-  Pause,
   Power,
   Settings2,
   ShieldCheck,
@@ -16,12 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-import {
-  emergencyStopBot,
-  initializeBot,
-  pauseBot,
-  resumeBot,
-} from "@/app/bot/actions";
+import { OperationalControls } from "@/app/bot/operational-controls";
 import { navItems } from "@/app/nav";
 import { AppShell } from "@/components/app-shell";
 import { LiveMarketDashboardPanel } from "@/components/live-market";
@@ -36,12 +27,9 @@ import {
   PageHeader,
   Panel,
   PanelHeader,
-  PrimaryButton,
   StatPill,
   StatusCluster,
   StatusPill,
-  IconTextButton,
-  cx,
 } from "@/components/ui";
 import {
   appEnv,
@@ -51,11 +39,17 @@ import {
   getDashboardData,
   publicApiUrl,
   type BotStatus,
+  type Decision,
   type MarketSummary,
   type PortfolioStatus,
   type RiskConfig,
   type StrategyConfig,
 } from "@/lib/api";
+import {
+  explainDecision,
+  type RuleCheck,
+  type RuleStatus,
+} from "@/lib/decision-explain";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 type AttentionTone = "positive" | "warning" | "danger";
@@ -81,6 +75,8 @@ export default async function DashboardPage({
   const orders = data.orders.ok ? data.orders.data.orders : [];
   const fills = data.fills.ok ? data.fills.data.fills : [];
   const decisions = data.decisions.ok ? data.decisions.data.decisions : [];
+  const latestDecision = decisions[0] ?? null;
+  const latestDecisionExplanation = latestDecision ? explainDecision(latestDecision) : null;
   const strategy = data.strategyConfig.ok ? data.strategyConfig.data : null;
   const risk = data.riskConfig.ok ? data.riskConfig.data : null;
   const environment =
@@ -116,7 +112,7 @@ export default async function DashboardPage({
   });
 
   return (
-    <AppShell navItems={navItems} activeLabel="Dashboard">
+    <AppShell navItems={navItems} activeLabel="Dashboard" topbarActions={<OperationalControls bot={bot} />}>
       <PageHeader
         eyebrow={environmentLabel(environment)}
         title="Aurum operacional"
@@ -165,104 +161,27 @@ export default async function DashboardPage({
 
       <Panel>
         <PanelHeader eyebrow="Estado operacional" title="Robô e prontidão" icon={<Power />} />
-        <div className="grid grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] gap-5 max-xl:grid-cols-1">
-          <div className="grid content-start gap-5">
+        <div className="grid grid-cols-[minmax(0,0.85fr)_minmax(320px,1.15fr)] gap-5 max-xl:grid-cols-1">
+          <CompactList>
+            <InfoRow label="Status" value={botStatusLabel(bot?.status)} />
+            <InfoRow label="Último ciclo" value={formatDateTime(bot?.last_cycle_at)} />
+            <InfoRow label="Pausa/parada" value={formatDateTime(bot?.emergency_stopped_at ?? bot?.paused_at)} />
+            <InfoRow label="Motivo" value={shortText(bot?.reason ?? "sem motivo registrado")} />
+          </CompactList>
+
+          <div className="grid content-start gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <StatusPill tone={botStatusTone(bot?.status)}>
-                <CirclePause size={16} aria-hidden="true" />
-                {botStatusLabel(bot?.status)}
-              </StatusPill>
-              <StatusPill>
-                <ShieldCheck size={16} aria-hidden="true" />
-                Binance Spot Testnet
-              </StatusPill>
+              <StatusPill tone={botStatusTone(bot?.status)}>{botStatusLabel(bot?.status)}</StatusPill>
+              <StatusPill>Binance Spot Testnet</StatusPill>
               <StatusPill>BTCUSDT</StatusPill>
               <StatusPill>Long-only</StatusPill>
               <StatusPill>Sem alavancagem</StatusPill>
             </div>
-
-            <div className="grid gap-2">
-              <span className="text-xs font-medium leading-5 text-muted-foreground">Estado do robô</span>
-              <strong className={cx("text-3xl font-semibold leading-tight tracking-tight md:text-4xl", botStatusTextClass(bot?.status))}>
-                {botStatusLabel(bot?.status)}
-              </strong>
-              <p className="m-0 max-w-[780px] text-sm leading-6 text-muted-foreground">
-                {botStatusDescription(bot?.status)}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-              <StatPill label="API" value={apiHealthy ? "online" : "indisponível"} />
-              <StatPill label="Último ciclo" value={formatDateTime(bot?.last_cycle_at)} />
-              <StatPill label="Pausa/parada" value={formatDateTime(bot?.emergency_stopped_at ?? bot?.paused_at)} />
-              <StatPill label="Motivo" value={shortText(bot?.reason ?? "sem motivo registrado")} />
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {!bot ? (
-                <form action={initializeBot}>
-                  <PrimaryButton>
-                    <CirclePlay size={16} aria-hidden="true" />
-                    Inicializar robô
-                  </PrimaryButton>
-                </form>
-              ) : null}
-              {bot?.status === "paused" ? (
-                <form action={resumeBot}>
-                  <PrimaryButton>
-                    <CirclePlay size={16} aria-hidden="true" />
-                    Retomar
-                  </PrimaryButton>
-                </form>
-              ) : null}
-              {bot?.status === "running" ? (
-                <form action={pauseBot}>
-                  <IconTextButton>
-                    <Pause size={16} aria-hidden="true" />
-                    Pausar
-                  </IconTextButton>
-                </form>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="grid content-start gap-4">
             <ActionItem
               tone={operationalAttention.tone}
               title={operationalAttention.title}
               description={operationalAttention.description}
             />
-
-            <form
-              action={emergencyStopBot}
-              className="grid content-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4"
-            >
-              <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
-                <OctagonAlert size={18} aria-hidden="true" />
-                Parada de emergência
-              </div>
-              <p className="m-0 text-sm leading-6 text-muted-foreground">
-                Interrompe novas operações e bloqueia retomada automática. Digite PARAR para confirmar.
-              </p>
-              <input
-                className="min-h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!bot || bot.status === "emergency_stop"}
-                name="confirmation"
-                placeholder="PARAR"
-              />
-              <input name="reason" type="hidden" value="Parada de emergência acionada pelo dashboard" />
-              <button
-                className={cx(
-                  "inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-destructive/40 bg-background px-4 text-sm font-medium leading-none text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  (!bot || bot.status === "emergency_stop") && "cursor-not-allowed opacity-50",
-                )}
-                disabled={!bot || bot.status === "emergency_stop"}
-                type="submit"
-              >
-                <OctagonAlert size={16} aria-hidden="true" />
-                Acionar parada
-              </button>
-            </form>
           </div>
         </div>
       </Panel>
@@ -288,9 +207,9 @@ export default async function DashboardPage({
         />
         <MetricCard
           label="Última decisão"
-          value={decisionLabel(decisions[0]?.decision)}
-          detail={decisions[0] ? `${formatDateTime(decisions[0].decided_at)} · ${shortText(decisions[0].reason)}` : "Aguardando ciclo auditável"}
-          tone={decisionTone(decisions[0]?.decision)}
+          value={latestDecisionExplanation?.meta.label ?? "sem decisão"}
+          detail={latestDecision ? `${formatDateTime(latestDecision.decided_at)} · ${latestDecisionExplanation?.diagnostic.title}` : "Aguardando ciclo auditável"}
+          tone={latestDecisionExplanation?.meta.tone ?? "warning"}
         />
       </MetricCardGroup>
 
@@ -340,22 +259,12 @@ export default async function DashboardPage({
             {decisions.length === 0 ? (
               <EmptyState>Sem decisões registradas.</EmptyState>
             ) : (
-              decisions.slice(0, 4).map((decision) => (
-                <article
-                  className="grid gap-3 rounded-lg border border-border bg-background p-4"
-                  key={decision.id}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <StatusPill tone={decisionTone(decision.decision)}>{decisionLabel(decision.decision)}</StatusPill>
-                    <Link className="inline-flex items-center gap-1 text-sm font-semibold text-primary" href={`/decisions?decision=${decision.decision}`}>
-                      Abrir
-                      <ArrowRight size={14} aria-hidden="true" />
-                    </Link>
-                  </div>
-                  <time className="text-xs font-medium leading-5 text-muted-foreground">{formatDateTime(decision.decided_at)}</time>
-                  <p className="m-0 text-sm leading-6 text-muted-foreground">{shortText(decision.reason)}</p>
-                </article>
-              ))
+              <>
+                {latestDecision ? <LatestDecisionSummary decision={latestDecision} /> : null}
+                {decisions.slice(1, 4).map((decision) => (
+                  <DashboardDecisionItem decision={decision} key={decision.id} />
+                ))}
+              </>
             )}
           </CompactList>
         </Panel>
@@ -384,6 +293,82 @@ export default async function DashboardPage({
   );
 }
 
+function LatestDecisionSummary({ decision }: { decision: Decision }) {
+  const explanation = explainDecision(decision);
+  const compactChecks = compactDashboardChecks(explanation.checks);
+
+  return (
+    <article className="grid gap-4 rounded-lg border border-primary/25 bg-primary/5 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <StatusPill tone={explanation.meta.tone}>{explanation.meta.label}</StatusPill>
+            <StatusPill tone={explanation.diagnostic.tone}>{explanation.diagnostic.title}</StatusPill>
+          </div>
+          <time className="text-xs font-medium leading-5 text-muted-foreground">{formatDateTime(decision.decided_at)}</time>
+          <p className="m-0 mt-2 text-sm leading-6 text-foreground">{explanation.diagnostic.explanation}</p>
+          <p className="m-0 mt-1 text-xs leading-5 text-muted-foreground">{explanation.diagnostic.missingText}</p>
+        </div>
+        <Link className="inline-flex items-center gap-1 text-sm font-semibold text-primary" href={`/decisions?decision=${decision.decision}`}>
+          Abrir
+          <ArrowRight size={14} aria-hidden="true" />
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 max-md:grid-cols-1" aria-label="Regras principais da última decisão">
+        {compactChecks.map((check) => (
+          <CompactDecisionRule check={check} key={check.label} />
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function DashboardDecisionItem({ decision }: { decision: Decision }) {
+  const explanation = explainDecision(decision);
+
+  return (
+    <article className="grid gap-3 rounded-lg border border-border bg-background p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <StatusPill tone={explanation.meta.tone}>{explanation.meta.shortLabel}</StatusPill>
+        <Link className="inline-flex items-center gap-1 text-sm font-semibold text-primary" href={`/decisions?decision=${decision.decision}`}>
+          Abrir
+          <ArrowRight size={14} aria-hidden="true" />
+        </Link>
+      </div>
+      <div>
+        <time className="text-xs font-medium leading-5 text-muted-foreground">{formatDateTime(decision.decided_at)}</time>
+        <strong className="mt-1 block text-sm font-semibold leading-5 text-foreground">{explanation.diagnostic.title}</strong>
+      </div>
+      <p className="m-0 text-sm leading-6 text-muted-foreground">{shortText(explanation.diagnostic.explanation)}</p>
+    </article>
+  );
+}
+
+function CompactDecisionRule({ check }: { check: RuleCheck }) {
+  return (
+    <div className="grid gap-1 rounded-md border border-border bg-background px-3 py-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold leading-5 text-foreground">{check.label}</span>
+        <StatusPill className="min-h-7 px-2" tone={ruleStatusTone(check.status)}>
+          {ruleStatusLabel(check.status)}
+        </StatusPill>
+      </div>
+      <p className="m-0 text-xs leading-5 text-muted-foreground">{shortText(check.detail, 72)}</p>
+    </div>
+  );
+}
+
+function compactDashboardChecks(checks: RuleCheck[]) {
+  const labels = new Set([
+    "Regime long-only",
+    "Preço acima da SMA 200",
+    "Rompimento 20 candles",
+    "Volume acima da média",
+  ]);
+  return checks.filter((check) => labels.has(check.label));
+}
+
 function percentLabel(value: string | null | undefined) {
   if (value == null || value === "") return "-";
   const number = Number(value);
@@ -403,23 +388,20 @@ function moneyTone(value: string | null | undefined): "positive" | "warning" | "
   return parsed > 0 ? "positive" : "warning";
 }
 
-function decisionTone(value: string | undefined): "positive" | "warning" | "neutral" {
-  if (value === "COMPRA") return "positive";
-  if (value === "VENDA") return "warning";
-  if (value === "MANTER_POSICAO" || value === "NAO_OPERAR") return "neutral";
-  return "warning";
+function ruleStatusTone(status: RuleStatus): "positive" | "warning" | "neutral" {
+  if (status === "pass") return "positive";
+  if (status === "fail") return "warning";
+  return "neutral";
 }
 
-function decisionLabel(value: string | undefined) {
-  if (value === "COMPRA") return "Compra";
-  if (value === "VENDA") return "Venda";
-  if (value === "MANTER_POSICAO") return "Manter posição";
-  if (value === "NAO_OPERAR") return "Não operar";
-  return "sem decisão";
+function ruleStatusLabel(status: RuleStatus) {
+  if (status === "pass") return "Passou";
+  if (status === "fail") return "Falhou";
+  return "Sem dados";
 }
 
-function shortText(value: string) {
-  return value.length > 88 ? `${value.slice(0, 85)}...` : value;
+function shortText(value: string, maxLength = 88) {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 3)}...` : value;
 }
 
 function botStatusLabel(value: string | undefined) {
@@ -429,24 +411,11 @@ function botStatusLabel(value: string | undefined) {
   return "Não inicializado";
 }
 
-function botStatusDescription(value: string | undefined) {
-  if (value === "running") return "Ciclos operacionais liberados para o ambiente Testnet.";
-  if (value === "paused") return "Robô cadastrado e pausado. Retome apenas depois de validar configurações, mercado e carteira.";
-  if (value === "emergency_stop") return "Operação bloqueada por parada de emergência. A retomada precisa de intervenção técnica.";
-  return "Crie o estado operacional inicial para controlar pausa, retomada e parada de emergência pela interface.";
-}
-
 function botStatusTone(value: string | undefined): "positive" | "warning" | "danger" | "neutral" {
   if (value === "running") return "positive";
   if (value === "paused") return "warning";
   if (value === "emergency_stop") return "danger";
   return "neutral";
-}
-
-function botStatusTextClass(value: string | undefined) {
-  if (value === "running") return "text-primary";
-  if (value === "emergency_stop") return "text-destructive";
-  return "text-foreground";
 }
 
 function environmentLabel(value: string | null | undefined) {
