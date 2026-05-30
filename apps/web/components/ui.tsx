@@ -30,6 +30,139 @@ const statusTone: Record<Tone, string> = {
   danger: "border-destructive/30 bg-destructive/10 text-destructive",
 };
 
+type ButtonVariant = "primary" | "outline" | "danger" | "ghost";
+type ButtonSize = "sm" | "default" | "lg" | "icon";
+
+const buttonVariant: Record<ButtonVariant, string> = {
+  primary: "bg-primary text-primary-foreground hover:bg-primary/90",
+  outline: "border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
+  danger: "border border-destructive/40 bg-background text-destructive hover:bg-destructive/10",
+  ghost: "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+};
+
+const buttonSize: Record<ButtonSize, string> = {
+  sm: "min-h-9 px-3 text-xs",
+  default: "min-h-10 px-4 text-sm",
+  lg: "min-h-12 px-4 text-sm",
+  icon: "size-9 p-0",
+};
+
+const controlClass =
+  "min-h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground outline-none transition-[color,box-shadow,border-color] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50";
+
+export function Button({
+  children,
+  className,
+  variant = "primary",
+  size = "default",
+  type = "button",
+  ...props
+}: ComponentPropsWithoutRef<"button"> & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+}) {
+  return (
+    <button
+      className={cx(
+        "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0",
+        buttonVariant[variant],
+        buttonSize[size],
+        className,
+      )}
+      type={type}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function Input({ className, ...props }: ComponentPropsWithoutRef<"input">) {
+  return <input className={cx(controlClass, className)} {...props} />;
+}
+
+export function Select({ className, children, ...props }: ComponentPropsWithoutRef<"select">) {
+  return (
+    <select className={cx(controlClass, "appearance-auto", className)} {...props}>
+      {children}
+    </select>
+  );
+}
+
+export function Textarea({ className, ...props }: ComponentPropsWithoutRef<"textarea">) {
+  return <textarea className={cx(controlClass, "min-h-[128px] resize-y", className)} {...props} />;
+}
+
+export function CheckboxCard({
+  children,
+  className,
+  inputClassName,
+  ...props
+}: ComponentPropsWithoutRef<"input"> & {
+  children: ReactNode;
+  inputClassName?: string;
+}) {
+  return (
+    <label
+      className={cx(
+        "flex min-h-12 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent",
+        className,
+      )}
+    >
+      <input
+        className={cx("size-4 accent-primary", inputClassName)}
+        type="checkbox"
+        {...props}
+      />
+      <span className="min-w-0 break-words">{children}</span>
+    </label>
+  );
+}
+
+export function Table({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<"table">) {
+  return (
+    <div className="relative w-full overflow-x-auto rounded-lg border border-border bg-background">
+      <table className={cx("w-full caption-bottom text-sm", className)} {...props} />
+    </div>
+  );
+}
+
+export function TableHeader({ className, ...props }: ComponentPropsWithoutRef<"thead">) {
+  return <thead className={cx("bg-muted/55 [&_tr]:border-b", className)} {...props} />;
+}
+
+export function TableBody({ className, ...props }: ComponentPropsWithoutRef<"tbody">) {
+  return <tbody className={cx("[&_tr:last-child]:border-0", className)} {...props} />;
+}
+
+export function TableRow({ className, ...props }: ComponentPropsWithoutRef<"tr">) {
+  return (
+    <tr
+      className={cx("h-14 border-b border-border transition-colors hover:bg-muted/45", className)}
+      {...props}
+    />
+  );
+}
+
+export function TableHead({ className, ...props }: ComponentPropsWithoutRef<"th">) {
+  return (
+    <th
+      className={cx(
+        "h-10 whitespace-nowrap px-3 text-left align-middle text-xs font-semibold uppercase leading-none tracking-wide text-muted-foreground",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function TableCell({ className, ...props }: ComponentPropsWithoutRef<"td">) {
+  return <td className={cx("px-3 py-3 align-middle text-sm", className)} {...props} />;
+}
+
 export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <p
@@ -329,25 +462,19 @@ export function JsonDetails({
   );
 }
 
-export function PrimaryButton({ children }: { children: ReactNode }) {
+export function PrimaryButton({ children, ...props }: ComponentPropsWithoutRef<"button">) {
   return (
-    <button
-      className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium leading-none text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      type="submit"
-    >
+    <Button size="lg" type="submit" {...props}>
       {children}
-    </button>
+    </Button>
   );
 }
 
-export function IconTextButton({ children }: { children: ReactNode }) {
+export function IconTextButton({ children, ...props }: ComponentPropsWithoutRef<"button">) {
   return (
-    <button
-      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium leading-none text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      type="submit"
-    >
+    <Button type="submit" variant="outline" {...props}>
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -412,61 +539,30 @@ export function FieldGroup({
   );
 }
 
-const fieldClass =
-  "min-h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
-
 export function LabeledInput({
   label,
-  name,
   type = "text",
-  defaultValue,
-  placeholder,
-  min,
-  step,
-  required,
+  ...props
 }: {
   label: string;
-  name: string;
-  type?: string;
-  defaultValue?: string;
-  placeholder?: string;
-  min?: string;
-  step?: string;
-  required?: boolean;
-}) {
+} & ComponentPropsWithoutRef<"input">) {
   return (
     <FieldGroup label={label}>
-      <input
-        className={fieldClass}
-        name={name}
-        type={type}
-        defaultValue={defaultValue}
-        placeholder={placeholder}
-        min={min}
-        step={step}
-        required={required}
-      />
+      <Input type={type} {...props} />
     </FieldGroup>
   );
 }
 
 export function LabeledTextarea({
   label,
-  name,
-  placeholder,
+  className,
+  ...props
 }: {
   label: string;
-  name: string;
-  placeholder: string;
-}) {
+} & ComponentPropsWithoutRef<"textarea">) {
   return (
     <FieldGroup label={label} wide>
-      <textarea
-        className={cx(fieldClass, "min-h-[128px] resize-y font-mono text-xs leading-relaxed")}
-        name={name}
-        placeholder={placeholder}
-        rows={5}
-      />
+      <Textarea className={cx("font-mono text-xs leading-relaxed", className)} rows={5} {...props} />
     </FieldGroup>
   );
 }

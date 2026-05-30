@@ -2,15 +2,17 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Bell, Search } from "lucide-react";
 
-import { cx, type NavItem } from "@/components/ui";
+import { Button, cx, type NavItem } from "@/components/ui";
 
 export function AppShell({
   navItems,
   activeLabel,
+  topbarActions,
   children,
 }: {
   navItems: readonly NavItem[];
   activeLabel: string;
+  topbarActions?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -30,22 +32,30 @@ export function AppShell({
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-muted-foreground">{activeLabel}</p>
         </div>
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          <button
-            className="hidden h-9 items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:inline-flex"
+        <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
+          {topbarActions ? (
+            <div className="flex min-w-0 items-center gap-2">
+              {topbarActions}
+            </div>
+          ) : null}
+          <Button
+            className="hidden md:inline-flex"
+            size="sm"
             type="button"
+            variant="ghost"
           >
             <Search size={16} aria-hidden="true" />
             <span>Buscar</span>
             <kbd className="rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">Ctrl K</kbd>
-          </button>
-          <button
+          </Button>
+          <Button
             aria-label="Notificações"
-            className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            size="icon"
             type="button"
+            variant="ghost"
           >
             <Bell size={17} aria-hidden="true" />
-          </button>
+          </Button>
         </div>
       </header>
 

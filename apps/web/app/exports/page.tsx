@@ -3,7 +3,20 @@ import { CheckCircle2, CircleAlert, FileDown } from "lucide-react";
 import { createExport } from "@/app/exports/actions";
 import { navItems } from "@/app/nav";
 import { AppShell } from "@/components/app-shell";
-import { CompactList, InfoRow, LabeledInput, Notice, PageHeader, Panel, PanelHeader, PrimaryButton, StatusPill } from "@/components/ui";
+import {
+  CheckboxCard,
+  CompactList,
+  FieldGroup,
+  InfoRow,
+  LabeledInput,
+  Notice,
+  PageHeader,
+  Panel,
+  PanelHeader,
+  PrimaryButton,
+  Select,
+  StatusPill,
+} from "@/components/ui";
 import { fetchApi, formatDateTime, type ExportJob } from "@/lib/api";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -27,20 +40,18 @@ export default async function ExportsPage({ searchParams }: { searchParams?: Pro
         <Panel>
           <PanelHeader eyebrow="Nova exportação" title="Escopo e formato" icon={<FileDown />} />
           <form action={createExport} className="grid gap-3.5">
-            <label className="grid gap-[7px]">
-              <span className="text-[13px] text-ink-muted-48">Formato</span>
-              <select className="min-h-11 rounded-lg border border-hairline bg-canvas px-3.5" name="format" defaultValue="txt">
+            <FieldGroup label="Formato">
+              <Select name="format" defaultValue="txt">
                 <option value="txt">TXT</option>
                 <option value="csv">CSV</option>
                 <option value="pdf">PDF</option>
-              </select>
-            </label>
+              </Select>
+            </FieldGroup>
             <div className="grid grid-cols-2 gap-2 max-md:grid-cols-1">
               {["market", "portfolio", "operations", "decisions"].map((section) => (
-                <label className="flex min-h-11 items-center gap-2 rounded-lg border border-hairline bg-canvas px-3.5 text-sm" key={section}>
-                  <input name="sections" type="checkbox" value={section} defaultChecked />
+                <CheckboxCard name="sections" value={section} defaultChecked key={section}>
                   {section}
-                </label>
+                </CheckboxCard>
               ))}
             </div>
             <LabeledInput label="Início" name="period_start" type="datetime-local" />
@@ -60,7 +71,7 @@ export default async function ExportsPage({ searchParams }: { searchParams?: Pro
               <pre className="m-0 max-h-[420px] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-ink p-4 font-mono text-xs leading-relaxed text-on-primary">{job.content}</pre>
             </CompactList>
           ) : (
-            <p className="m-0 text-ink-muted-48">Gere uma exportação para visualizar o conteúdo retornado pela API.</p>
+            <p className="m-0 text-sm leading-6 text-muted-foreground">Gere uma exportação para visualizar o conteúdo retornado pela API.</p>
           )}
         </Panel>
       </section>

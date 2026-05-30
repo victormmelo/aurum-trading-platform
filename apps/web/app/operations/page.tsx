@@ -17,7 +17,6 @@ import {
   CompactList,
   EmptyState,
   IconTextButton,
-  InfoRow,
   MetricCard,
   MetricCardGroup,
   Notice,
@@ -25,6 +24,12 @@ import {
   Panel,
   PanelHeader,
   StatusPill,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
   cx,
 } from "@/components/ui";
 import {
@@ -166,40 +171,73 @@ export default async function OperationsPage({
       <section className="grid grid-cols-2 gap-[18px] max-lg:grid-cols-1">
         <Panel>
           <PanelHeader eyebrow="Detalhes técnicos" title="Ordens recentes" icon={<Activity />} />
-          <CompactList>
-            {orders.length === 0 ? <EmptyState>Sem ordens registradas.</EmptyState> : orders.map((order) => (
-              <article className="grid gap-3 rounded-lg border border-border bg-background p-4" key={order.id}>
-                <div className="flex items-center justify-between gap-3">
-                  <strong className={cx("text-sm font-semibold", sideTextClass(order.side))}>{sideLabel(order.side)}</strong>
-                  <StatusPill tone={orderStatusTone(order.status)}>{orderStatusLabel(order.status)}</StatusPill>
-                </div>
-                <InfoRow label="Quantidade executada" value={formatQuantity(order.executed_quantity)} />
-                <InfoRow label="Preço médio" value={formatMoney(order.average_price)} />
-                <InfoRow label="Enviada" value={formatDateTime(order.submitted_at)} />
-              </article>
-            ))}
-          </CompactList>
+          <OrdersTable orders={orders} />
         </Panel>
 
         <Panel>
           <PanelHeader eyebrow="Detalhes técnicos" title="Fills confirmados" icon={<ShieldCheck />} />
-          <CompactList>
-            {fills.length === 0 ? <EmptyState>Sem fills registrados.</EmptyState> : fills.map((fill) => (
-              <article className="grid gap-3 rounded-lg border border-border bg-background p-4" key={fill.id}>
-                <div className="flex items-center justify-between gap-3">
-                  <strong className="text-sm font-semibold text-primary">Execução confirmada</strong>
-                  <StatusPill tone="positive">Fill</StatusPill>
-                </div>
-                <InfoRow label="Horário" value={formatDateTime(fill.filled_at)} />
-                <InfoRow label="Preço" value={formatMoney(fill.price)} />
-                <InfoRow label="Quantidade" value={formatQuantity(fill.quantity)} />
-                <InfoRow label="Taxa" value={fill.fee_amount == null ? "-" : `${fill.fee_amount} ${fill.fee_asset ?? ""}`} />
-              </article>
-            ))}
-          </CompactList>
+          <FillsTable fills={fills} />
         </Panel>
       </section>
     </AppShell>
+  );
+}
+
+function OrdersTable({ orders }: { orders: Order[] }) {
+  if (orders.length === 0) return <EmptyState>Sem ordens registradas.</EmptyState>;
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Lado</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="text-right">Executada</TableHead>
+          <TableHead className="text-right">Preço médio</TableHead>
+          <TableHead>Enviada</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {orders.map((order) => (
+          <TableRow key={order.id}>
+            <TableCell><strong className={cx("text-sm font-semibold", sideTextClass(order.side))}>{sideLabel(order.side)}</strong></TableCell>
+            <TableCell><StatusPill tone={orderStatusTone(order.status)}>{orderStatusLabel(order.status)}</StatusPill></TableCell>
+            <TableCell className="text-right tabular-nums">{formatQuantity(order.executed_quantity)}</TableCell>
+            <TableCell className="text-right tabular-nums">{formatMoney(order.average_price)}</TableCell>
+            <TableCell className="text-muted-foreground">{formatDateTime(order.submitted_at)}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function FillsTable({ fills }: { fills: Fill[] }) {
+  if (fills.length === 0) return <EmptyState>Sem fills registrados.</EmptyState>;
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Status</TableHead>
+          <TableHead>Horário</TableHead>
+          <TableHead className="text-right">Preço</TableHead>
+          <TableHead className="text-right">Quantidade</TableHead>
+          <TableHead className="text-right">Taxa</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {fills.map((fill) => (
+          <TableRow key={fill.id}>
+            <TableCell><StatusPill tone="positive">Fill</StatusPill></TableCell>
+            <TableCell className="text-muted-foreground">{formatDateTime(fill.filled_at)}</TableCell>
+            <TableCell className="text-right tabular-nums">{formatMoney(fill.price)}</TableCell>
+            <TableCell className="text-right tabular-nums">{formatQuantity(fill.quantity)}</TableCell>
+            <TableCell className="text-right tabular-nums">{fill.fee_amount == null ? "-" : `${fill.fee_amount} ${fill.fee_asset ?? ""}`}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
 

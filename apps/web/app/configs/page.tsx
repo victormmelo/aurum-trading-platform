@@ -35,6 +35,12 @@ import {
   PrimaryButton,
   StatPill,
   StatusPill,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
   cx,
 } from "@/components/ui";
 import {
@@ -194,7 +200,7 @@ export default async function ConfigsPage({
                 <LabeledInput label="Confirmacao de tendencia" name="trend_confirmation" defaultValue="4h" />
                 <StatPill label="Tendencia maior" value="1d" />
               </div>
-              <p className="m-0 text-sm leading-6 tracking-[-0.224px] text-ink-muted-48">
+              <p className="m-0 text-sm leading-6 text-muted-foreground">
                 A tendencia maior e salva para auditoria da configuracao. Hoje a decisao do worker usa o periodo de decisao e a confirmacao de tendencia.
               </p>
             </GuidedStep>
@@ -286,25 +292,11 @@ export default async function ConfigsPage({
 
       <section className="grid grid-cols-2 gap-[18px] max-md:grid-cols-1">
         <ConfigPanel eyebrow="Historico" title="Versoes de estrategia" icon={<LineChart />}>
-          <div className="grid gap-3.5">
-            {strategyConfigs.length === 0 ? (
-              <EmptyState>Sem versoes de estrategia.</EmptyState>
-            ) : (
-              strategyConfigs.map((config) => (
-                <StrategyConfigRow config={config} key={config.id} />
-              ))
-            )}
-          </div>
+          <StrategyConfigTable configs={strategyConfigs} />
         </ConfigPanel>
 
         <ConfigPanel eyebrow="Historico" title="Versoes de risco" icon={<ShieldCheck />}>
-          <div className="grid gap-3.5">
-            {riskConfigs.length === 0 ? (
-              <EmptyState>Sem versoes de risco.</EmptyState>
-            ) : (
-              riskConfigs.map((config) => <RiskConfigRow config={config} key={config.id} />)
-            )}
-          </div>
+          <RiskConfigTable configs={riskConfigs} />
         </ConfigPanel>
       </section>
     </AppShell>
@@ -323,14 +315,14 @@ function GuidedStep({
   children: ReactNode;
 }) {
   return (
-    <section className="grid gap-4 rounded-lg border border-hairline bg-surface-pearl p-4">
+    <section className="grid gap-4 rounded-lg border border-border bg-muted p-4">
       <div className="flex items-start gap-3">
         <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-on-primary">
           {number}
         </span>
         <div className="min-w-0">
-          <h3 className="m-0 text-[21px] font-semibold leading-[1.2] tracking-[-0.224px]">{title}</h3>
-          <p className="m-0 mt-2 text-[15px] leading-6 tracking-[-0.224px] text-ink-muted-48">{description}</p>
+          <h3 className="m-0 text-xl font-semibold leading-tight tracking-tight">{title}</h3>
+          <p className="m-0 mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
         </div>
       </div>
       <div className="grid gap-3">{children}</div>
@@ -340,9 +332,9 @@ function GuidedStep({
 
 function SummaryCard({ title, lines }: { title: string; lines: string[] }) {
   return (
-    <div className="grid gap-3 rounded-lg border border-hairline bg-canvas p-4">
-      <h3 className="m-0 text-[17px] font-semibold leading-[1.24] tracking-[-0.374px]">{title}</h3>
-      <ul className="m-0 grid gap-2 p-0 text-sm leading-6 tracking-[-0.224px] text-ink-muted-48">
+    <div className="grid gap-3 rounded-lg border border-border bg-background p-4">
+      <h3 className="m-0 text-base font-semibold leading-tight">{title}</h3>
+      <ul className="m-0 grid gap-2 p-0 text-sm leading-6 text-muted-foreground">
         {lines.map((line) => (
           <li className="flex gap-2" key={line}>
             <CheckCircle2 className="mt-1 shrink-0 text-primary" size={15} aria-hidden="true" />
@@ -377,20 +369,20 @@ function ReadinessRow({
   return (
     <div
       className={cx(
-        "grid gap-2 rounded-lg border bg-canvas p-4",
+        "grid gap-2 rounded-lg border bg-background p-4",
         tone === "positive" && "border-primary/35",
-        tone === "warning" && "border-hairline bg-surface-pearl",
-        tone === "neutral" && "border-hairline",
+        tone === "warning" && "border-border bg-muted",
+        tone === "neutral" && "border-border",
       )}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="text-primary">{icon}</span>
-          <strong className="min-w-0 text-[15px] font-semibold leading-[1.24] tracking-[-0.224px]">{label}</strong>
+          <strong className="min-w-0 text-sm font-semibold leading-5">{label}</strong>
         </div>
-        <span className={tone === "positive" ? "text-primary" : "text-ink-muted-48"}>{statusIcon}</span>
+        <span className={tone === "positive" ? "text-primary" : "text-muted-foreground"}>{statusIcon}</span>
       </div>
-      <p className="m-0 text-sm leading-6 tracking-[-0.224px] text-ink-muted-48">{detail}</p>
+      <p className="m-0 text-sm leading-6 text-muted-foreground">{detail}</p>
     </div>
   );
 }
@@ -441,73 +433,102 @@ function ConfigPanel({
   );
 }
 
-function StrategyConfigRow({ config }: { config: StrategyConfigItem }) {
+function StrategyConfigTable({ configs }: { configs: StrategyConfigItem[] }) {
+  if (configs.length === 0) return <EmptyState>Sem versoes de estrategia.</EmptyState>;
+
   return (
-    <article className={configRowClass(config.is_active)}>
-      <ConfigRowHeader config={config} action={activateStrategyConfig} />
-      <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
-        <InfoRow label="Periodo de decisao" value={config.signal_timeframe} />
-        <InfoRow label="Confirmacao" value={config.regime_timeframe_primary} />
-        <InfoRow label="Criado" value={formatDateTime(config.created_at)} />
-        <InfoRow label="Ativado" value={formatDateTime(config.activated_at)} />
-      </div>
-      <JsonDetails label="Detalhes avancados" value={compactJson(config.parameters)} icon={<FileJson size={16} aria-hidden="true" />} />
-    </article>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Versão</TableHead>
+          <TableHead>Estratégia</TableHead>
+          <TableHead>Períodos</TableHead>
+          <TableHead>Ativação</TableHead>
+          <TableHead className="text-right">Status</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {configs.map((config) => (
+          <TableRow key={config.id} className={config.is_active ? "bg-primary/5" : undefined}>
+            <TableCell className="font-semibold">v{config.version}</TableCell>
+            <TableCell>
+              <div className="grid gap-2">
+                <strong className="text-sm font-semibold leading-5">{config.name}</strong>
+                <JsonDetails label="Detalhes avancados" value={compactJson(config.parameters)} icon={<FileJson size={16} aria-hidden="true" />} />
+              </div>
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              {config.signal_timeframe} / {config.regime_timeframe_primary}
+            </TableCell>
+            <TableCell className="text-muted-foreground">{formatDateTime(config.activated_at ?? config.created_at)}</TableCell>
+            <TableCell className="text-right"><ConfigRowAction config={config} action={activateStrategyConfig} /></TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
 
-function RiskConfigRow({ config }: { config: RiskConfigItem }) {
+function RiskConfigTable({ configs }: { configs: RiskConfigItem[] }) {
+  if (configs.length === 0) return <EmptyState>Sem versoes de risco.</EmptyState>;
+
   return (
-    <article className={configRowClass(config.is_active)}>
-      <ConfigRowHeader config={config} action={activateRiskConfig} />
-      <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
-        <InfoRow label="Risco por operacao" value={percentLabel(config.risk_per_trade_pct)} />
-        <InfoRow label="Perda diaria maxima" value={percentLabel(config.daily_loss_limit_pct)} />
-        <InfoRow label="Exposicao maxima" value={percentLabel(config.max_exposure_pct)} />
-        <InfoRow label="Ativado" value={formatDateTime(config.activated_at)} />
-      </div>
-      <JsonDetails label="Detalhes avancados" value={compactJson(config.parameters)} icon={<FileJson size={16} aria-hidden="true" />} />
-    </article>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Versão</TableHead>
+          <TableHead>Risco</TableHead>
+          <TableHead>Limites</TableHead>
+          <TableHead>Ativação</TableHead>
+          <TableHead className="text-right">Status</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {configs.map((config) => (
+          <TableRow key={config.id} className={config.is_active ? "bg-primary/5" : undefined}>
+            <TableCell className="font-semibold">v{config.version}</TableCell>
+            <TableCell>
+              <div className="grid gap-2">
+                <strong className="text-sm font-semibold leading-5">{config.name}</strong>
+                <JsonDetails label="Detalhes avancados" value={compactJson(config.parameters)} icon={<FileJson size={16} aria-hidden="true" />} />
+              </div>
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              {percentLabel(config.risk_per_trade_pct)} / {percentLabel(config.daily_loss_limit_pct)} / {percentLabel(config.max_exposure_pct)}
+            </TableCell>
+            <TableCell className="text-muted-foreground">{formatDateTime(config.activated_at)}</TableCell>
+            <TableCell className="text-right"><ConfigRowAction config={config} action={activateRiskConfig} /></TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
 
-function ConfigRowHeader({
+function ConfigRowAction({
   config,
   action,
 }: {
   config: StrategyConfigItem | RiskConfigItem;
   action: (formData: FormData) => Promise<void>;
 }) {
-  return (
-    <div className="flex items-start justify-between gap-4 max-md:flex-col max-md:items-stretch">
-      <div>
-        <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase leading-none tracking-[0.24px] text-ink-muted-48 before:block before:size-1.5 before:rounded-full before:bg-primary before:content-['']">
-          v{config.version}
-        </p>
-        <h2 className="m-0 text-2xl font-medium leading-tight tracking-[-0.02em]">{config.name}</h2>
-      </div>
-      {config.is_active ? (
-        <StatusPill tone="positive">
-          <CheckCircle2 size={16} aria-hidden="true" />
-          Ativa
-        </StatusPill>
-      ) : (
-        <form action={action}>
-          <input type="hidden" name="id" value={config.id} />
-          <IconTextButton>
-            <CirclePlay size={16} aria-hidden="true" />
-            Ativar
-          </IconTextButton>
-        </form>
-      )}
-    </div>
-  );
-}
+  if (config.is_active) {
+    return (
+      <StatusPill tone="positive">
+        <CheckCircle2 size={16} aria-hidden="true" />
+        Ativa
+      </StatusPill>
+    );
+  }
 
-function configRowClass(isActive: boolean) {
-  return cx(
-    "grid gap-4 rounded-lg border border-hairline bg-canvas p-[18px]",
-    isActive && "border-primary/45 bg-surface-pearl",
+  return (
+    <form action={action} className="flex justify-end">
+      <input type="hidden" name="id" value={config.id} />
+      <IconTextButton>
+        <CirclePlay size={16} aria-hidden="true" />
+        Ativar
+      </IconTextButton>
+    </form>
   );
 }
 
