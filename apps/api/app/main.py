@@ -8,6 +8,7 @@ from app.api.routes.health import router as health_router
 from app.api.routes.market import router as market_router
 from app.api.routes.mcp import router as mcp_router
 from app.api.routes.operations import router as operations_router
+from app.api.routes.performance import router as performance_router
 from app.api.routes.portfolio import router as portfolio_router
 from app.core.config import get_settings
 
@@ -26,6 +27,7 @@ def create_app() -> FastAPI:
     app.include_router(market_router)
     app.include_router(portfolio_router)
     app.include_router(operations_router)
+    app.include_router(performance_router)
     app.include_router(decisions_router)
     app.include_router(exports_router)
     app.include_router(mcp_router)

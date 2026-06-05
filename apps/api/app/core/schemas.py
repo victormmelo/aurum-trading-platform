@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
@@ -228,6 +228,62 @@ class OrderFillsResponse(BaseModel):
     environment: str
     symbol: str
     fills: list[OrderFillResponse]
+
+
+class PerformanceDailyPointResponse(BaseModel):
+    date: date
+    realized_pnl: Decimal
+    equity: Decimal | None
+
+
+class PerformanceSummaryResponse(BaseModel):
+    environment: str
+    symbol: str
+    period: Literal["7d", "30d", "90d", "mtd", "ytd", "all"]
+    period_start: datetime | None
+    period_end: datetime
+    realized_pnl: Decimal
+    unrealized_pnl: Decimal
+    total_pnl: Decimal
+    initial_equity: Decimal | None
+    final_equity: Decimal | None
+    return_pct: Decimal | None
+    total_fees_usdt: Decimal
+    sell_count: int
+    win_rate_pct: Decimal
+    average_win_usdt: Decimal | None
+    average_loss_usdt: Decimal | None
+    largest_win_usdt: Decimal | None
+    largest_loss_usdt: Decimal | None
+    max_drawdown_pct: Decimal
+    status: Literal["lucrando", "perdendo", "sem_amostra_suficiente", "atencao"]
+    daily: list[PerformanceDailyPointResponse]
+
+
+class PerformanceTradeResponse(BaseModel):
+    id: UUID
+    order_id: UUID
+    decision_id: UUID | None
+    bot_run_id: UUID | None
+    sold_at: datetime
+    quantity: Decimal
+    average_sell_price: Decimal
+    average_cost: Decimal
+    gross_proceeds: Decimal
+    cost_basis_reduced: Decimal
+    fees_usdt: Decimal
+    pnl_usdt: Decimal
+    pnl_pct: Decimal | None
+    source: str
+    status: str
+    fee_estimated: bool
+
+
+class PerformanceTradesResponse(BaseModel):
+    environment: str
+    symbol: str
+    period: Literal["7d", "30d", "90d", "mtd", "ytd", "all"]
+    trades: list[PerformanceTradeResponse]
 
 
 class ManualOrderRequest(BaseModel):

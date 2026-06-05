@@ -55,6 +55,30 @@ export type MarketSummary = {
   } | null;
 };
 
+export type MarketCandle = {
+  id: string;
+  environment: string;
+  exchange: string;
+  symbol: string;
+  interval: "1h" | "4h" | "1d";
+  open_time: string;
+  close_time: string;
+  open_price: string;
+  high_price: string;
+  low_price: string;
+  close_price: string;
+  volume: string;
+  quote_volume: string | null;
+  trade_count: number | null;
+};
+
+export type MarketCandlesResponse = {
+  environment: string;
+  symbol: string;
+  interval: "1h" | "4h" | "1d";
+  candles: MarketCandle[];
+};
+
 export type PortfolioStatus = {
   environment: string;
   symbol: string;
@@ -148,6 +172,64 @@ export type FillsResponse = {
     fee_asset: string | null;
     fee_estimated_usdt: string | null;
   }>;
+};
+
+export type PerformancePeriod = "7d" | "30d" | "90d" | "mtd" | "ytd" | "all";
+
+export type PerformanceDailyPoint = {
+  date: string;
+  realized_pnl: string;
+  equity: string | null;
+};
+
+export type PerformanceSummary = {
+  environment: string;
+  symbol: string;
+  period: PerformancePeriod;
+  period_start: string | null;
+  period_end: string;
+  realized_pnl: string;
+  unrealized_pnl: string;
+  total_pnl: string;
+  initial_equity: string | null;
+  final_equity: string | null;
+  return_pct: string | null;
+  total_fees_usdt: string;
+  sell_count: number;
+  win_rate_pct: string;
+  average_win_usdt: string | null;
+  average_loss_usdt: string | null;
+  largest_win_usdt: string | null;
+  largest_loss_usdt: string | null;
+  max_drawdown_pct: string;
+  status: "lucrando" | "perdendo" | "sem_amostra_suficiente" | "atencao";
+  daily: PerformanceDailyPoint[];
+};
+
+export type PerformanceTrade = {
+  id: string;
+  order_id: string;
+  decision_id: string | null;
+  bot_run_id: string | null;
+  sold_at: string;
+  quantity: string;
+  average_sell_price: string;
+  average_cost: string;
+  gross_proceeds: string;
+  cost_basis_reduced: string;
+  fees_usdt: string;
+  pnl_usdt: string;
+  pnl_pct: string | null;
+  source: string;
+  status: string;
+  fee_estimated: boolean;
+};
+
+export type PerformanceTradesResponse = {
+  environment: string;
+  symbol: string;
+  period: PerformancePeriod;
+  trades: PerformanceTrade[];
 };
 
 export type Decision = {
@@ -342,6 +424,7 @@ export async function getDashboardData() {
     decisions,
     strategyConfig,
     riskConfig,
+    performance,
   ] = await Promise.all([
     fetchApi<HealthStatus>("/health"),
     fetchApi<BotStatus>("/bot/status"),
@@ -352,9 +435,21 @@ export async function getDashboardData() {
     fetchApi<DecisionsResponse>("/decisions?limit=5"),
     fetchApi<StrategyConfig>("/configs/strategy/active"),
     fetchApi<RiskConfig>("/configs/risk/active"),
+    fetchApi<PerformanceSummary>("/performance/summary?period=30d"),
   ]);
 
-  return { health, bot, market, portfolio, orders, fills, decisions, strategyConfig, riskConfig };
+  return {
+    health,
+    bot,
+    market,
+    portfolio,
+    orders,
+    fills,
+    decisions,
+    strategyConfig,
+    riskConfig,
+    performance,
+  };
 }
 
 export type StrategyConfigItem = {

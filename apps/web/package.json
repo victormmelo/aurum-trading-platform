@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.0",
+    "lightweight-charts": "^5.2.0",
     "lucide-react": "^0.468.0",
     "next": "^15.0.0",
     "postcss": "^8.5.14",

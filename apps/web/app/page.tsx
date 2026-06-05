@@ -5,6 +5,7 @@ import {
   Bot,
   CheckCircle2,
   Database,
+  LineChart,
   Power,
   Settings2,
   ShieldCheck,
@@ -42,6 +43,7 @@ import {
   type Decision,
   type MarketSummary,
   type PortfolioStatus,
+  type PerformanceSummary,
   type RiskConfig,
   type StrategyConfig,
 } from "@/lib/api";
@@ -79,6 +81,7 @@ export default async function DashboardPage({
   const latestDecisionExplanation = latestDecision ? explainDecision(latestDecision) : null;
   const strategy = data.strategyConfig.ok ? data.strategyConfig.data : null;
   const risk = data.riskConfig.ok ? data.riskConfig.data : null;
+  const performance = data.performance.ok ? data.performance.data : null;
   const environment =
     bot?.environment ??
     (data.market.ok ? data.market.data.environment : null) ??
@@ -185,6 +188,45 @@ export default async function DashboardPage({
           </div>
         </div>
       </Panel>
+
+      <section className="grid gap-4">
+        <PanelHeader eyebrow="Performance 30d" title="Resultado financeiro da estratégia" icon={<LineChart />} />
+        {!data.performance.ok ? (
+          <Notice tone="warning" icon={<AlertTriangle size={18} aria-hidden="true" />}>
+            Não foi possível carregar a apuração de performance.
+          </Notice>
+        ) : null}
+        <MetricCardGroup aria-label="Resultado financeiro">
+          <MetricCard
+            label="Realizado no período"
+            value={formatMoney(performance?.realized_pnl)}
+            detail={`${performance?.sell_count ?? 0} venda(s) · acerto ${percentLabel(performance?.win_rate_pct)}`}
+            tone={moneyTone(performance?.realized_pnl)}
+          />
+          <MetricCard
+            label="Aberto na posição"
+            value={formatMoney(performance?.unrealized_pnl)}
+            detail="PnL não realizado da carteira reconciliada"
+            tone={moneyTone(performance?.unrealized_pnl)}
+          />
+          <MetricCard
+            label="Resultado total"
+            value={formatMoney(performance?.total_pnl)}
+            detail={`Taxas ${formatMoney(performance?.total_fees_usdt)} · DD ${percentLabel(performance?.max_drawdown_pct)}`}
+            tone={moneyTone(performance?.total_pnl)}
+          />
+          <MetricCard
+            label="Status da estratégia"
+            value={performanceStatusLabel(performance)}
+            detail={`Retorno patrimonial ${percentLabel(performance?.return_pct)}`}
+            tone={performanceStatusTone(performance)}
+          />
+        </MetricCardGroup>
+        <Link className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary" href="/performance">
+          Ver apuração por venda
+          <ArrowRight size={14} aria-hidden="true" />
+        </Link>
+      </section>
 
       <MetricCardGroup aria-label="Indicadores principais">
         <MetricCard
@@ -386,6 +428,24 @@ function moneyTone(value: string | null | undefined): "positive" | "warning" | "
   const parsed = value == null ? Number.NaN : Number(value);
   if (!Number.isFinite(parsed) || parsed === 0) return "neutral";
   return parsed > 0 ? "positive" : "warning";
+}
+
+function performanceStatusLabel(value: PerformanceSummary | null) {
+  if (!value) return "sem dados";
+  if (value.status === "lucrando") return "Lucrando";
+  if (value.status === "perdendo") return "Perdendo";
+  if (value.status === "sem_amostra_suficiente") return "Sem amostra";
+  return "Atenção";
+}
+
+function performanceStatusTone(
+  value: PerformanceSummary | null,
+): "positive" | "warning" | "danger" | "neutral" {
+  if (!value) return "neutral";
+  if (value.status === "lucrando") return "positive";
+  if (value.status === "perdendo") return "danger";
+  if (value.status === "sem_amostra_suficiente") return "warning";
+  return "warning";
 }
 
 function ruleStatusTone(status: RuleStatus): "positive" | "warning" | "neutral" {
