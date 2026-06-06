@@ -15,6 +15,7 @@ class CandleImportResult:
     interval: str
     fetched: int
     inserted: int
+    last_close_time: datetime | None
 
 
 def import_historical_candles(
@@ -39,8 +40,14 @@ def import_historical_candles(
             end_time=end_time,
         )
         inserted = insert_market_candles(session, environment=environment, candles=candles)
+        last_close = candles[-1].close_time if candles else None
         results.append(
-            CandleImportResult(interval=interval, fetched=len(candles), inserted=inserted)
+            CandleImportResult(
+                interval=interval,
+                fetched=len(candles),
+                inserted=inserted,
+                last_close_time=last_close,
+            )
         )
 
     session.commit()

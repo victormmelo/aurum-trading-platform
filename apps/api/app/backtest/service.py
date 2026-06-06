@@ -134,11 +134,14 @@ def _backfill_candles(session: Session, run: BacktestRun) -> None:
     # Always use the public Binance API for market data — Testnet has no historical candles
     client = BinanceMarketClient(_BINANCE_PUBLIC_BASE_URL)
     intervals = _required_intervals(run.signal_interval)
+    signal_interval = intervals[0]
 
-    # Paginate to cover the full date range (Binance max 1000 per call)
+    # Advance current based on last_close_time returned by Binance, NOT by querying the DB.
+    # Querying the DB would pick up pre-existing worker candles (Testnet, recent dates) and
+    # cause the loop to exit after just one iteration, leaving historical data unloaded.
     current = run.start_date
     while current < run.end_date:
-        import_historical_candles(
+        results = import_historical_candles(
             session,
             client,
             environment=run.environment,
@@ -148,27 +151,13 @@ def _backfill_candles(session: Session, run: BacktestRun) -> None:
             start_time=current,
             end_time=run.end_date,
         )
-        # Advance pointer: check what was actually inserted and move forward
-        latest = _latest_candle_time(session, run, intervals[0])
-        if latest is None or latest <= current:
+        signal_result = next((r for r in results if r.interval == signal_interval), None)
+        last_close = signal_result.last_close_time if signal_result else None
+        if not signal_result or not signal_result.fetched or last_close is None:
             break
-        current = latest
-
-
-def _latest_candle_time(session: Session, run: BacktestRun, interval: str) -> datetime | None:
-    stmt = (
-        select(MarketCandle.close_time)
-        .where(
-            MarketCandle.environment == run.environment,
-            MarketCandle.symbol == run.symbol,
-            MarketCandle.interval == interval,
-            MarketCandle.close_time >= run.start_date,
-            MarketCandle.close_time <= run.end_date,
-        )
-        .order_by(MarketCandle.close_time.desc())
-        .limit(1)
-    )
-    return session.scalar(stmt)
+        if last_close <= current:
+            break
+        current = last_close
 
 
 def _load_candles(session: Session, run: BacktestRun, interval: str) -> list[StrategyCandle]:
