@@ -12,9 +12,10 @@ from app.db.models import BotRuntimeState, MarketCandle, MarketSnapshot
 from app.db.session import get_session_factory
 from app.execution.binance_private import BinanceCredentials, BinancePrivateClient
 from app.market.binance import BinanceMarketClient
+from app.market.importer import insert_market_candles
 from app.market.refresh import refresh_market_data, save_market_snapshot_from_candles
 from app.portfolio.reconciliation import BinancePortfolioReconciler
-from app.worker.cycle import run_worker_cycle
+from app.worker.cycle import DEFAULT_CANDLE_LIMIT, MIN_SIGNAL_CANDLES, run_worker_cycle
 
 MARKET_CHANNEL = "aurum:market:snapshots"
 
@@ -65,6 +66,7 @@ def main() -> None:
 
             now = time.monotonic()
             if now - last_worker_cycle_at >= settings.worker_cycle_seconds:
+                _backfill_if_needed(session_factory, market_client, settings)
                 with session_factory() as session:
                     runtime = session.scalars(
                         select(BotRuntimeState).where(
@@ -111,6 +113,43 @@ def main() -> None:
 
         elapsed = time.monotonic() - cycle_started_at
         time.sleep(max(1, settings.market_poll_seconds - elapsed))
+
+
+def _backfill_if_needed(session_factory, market_client, settings) -> None:  # noqa: ANN001
+    with session_factory() as session:
+        deficient: list[tuple[str, int]] = []
+        for interval in ["1h", "4h", "1d"]:
+            count = session.scalar(
+                select(func.count()).select_from(MarketCandle).where(
+                    MarketCandle.environment == settings.aurum_environment,
+                    MarketCandle.symbol == settings.trading_symbol,
+                    MarketCandle.interval == interval,
+                )
+            ) or 0
+            if count < MIN_SIGNAL_CANDLES:
+                deficient.append((interval, count))
+
+        if not deficient:
+            return
+
+        print(
+            f"Aurum backfill: histórico insuficiente em {[i for i, _ in deficient]}, "
+            f"buscando {DEFAULT_CANDLE_LIMIT} candles por intervalo",
+            flush=True,
+        )
+        for interval, current_count in deficient:
+            candles = market_client.get_klines(
+                settings.trading_symbol, interval, limit=DEFAULT_CANDLE_LIMIT
+            )
+            inserted = insert_market_candles(
+                session, environment=settings.aurum_environment, candles=candles
+            )
+            print(
+                f"Aurum backfill: {interval} tinha {current_count}, "
+                f"buscou {len(candles)}, inseriu {inserted}",
+                flush=True,
+            )
+        session.commit()
 
 
 def _log_startup_readiness(session_factory, settings) -> None:  # noqa: ANN001
