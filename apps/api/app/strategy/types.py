@@ -124,3 +124,59 @@ class BacktestResult:
     metrics: BacktestMetrics
     trades: list[BacktestTrade]
     decisions: list[BacktestDecision]
+
+
+# --- Multi-trade backtest types ---
+
+
+@dataclass(frozen=True)
+class EquityPoint:
+    timestamp: datetime
+    equity: Decimal
+    btc_price: Decimal
+    is_in_position: bool
+
+
+@dataclass(frozen=True)
+class FullBacktestTrade:
+    trade_index: int
+    entry_time: datetime
+    exit_time: datetime
+    entry_price: Decimal
+    exit_price: Decimal
+    quantity: Decimal
+    entry_value: Decimal
+    exit_value: Decimal
+    fees_paid: Decimal
+    pnl_usd: Decimal
+    return_pct: Decimal
+    exit_reason: str
+    is_winner: bool
+    equity_after: Decimal
+
+
+@dataclass(frozen=True)
+class FullBacktestMetrics:
+    total_return_pct: Decimal
+    total_return_usd: Decimal
+    final_capital: Decimal
+    max_drawdown_pct: Decimal
+    win_rate_pct: Decimal
+    profit_factor: Decimal | None
+    total_trades: int
+    winning_trades: int
+    losing_trades: int
+    avg_win_pct: Decimal | None
+    avg_loss_pct: Decimal | None
+    sharpe_ratio: Decimal | None
+    largest_win_pct: Decimal | None
+    largest_loss_pct: Decimal | None
+    avg_trade_duration_hours: Decimal | None
+    btc_buy_hold_return_pct: Decimal | None
+
+
+@dataclass(frozen=True)
+class FullBacktestResult:
+    metrics: FullBacktestMetrics
+    trades: list[FullBacktestTrade]
+    equity_points: list[EquityPoint]
