@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     )
     redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
 
+    telegram_bot_token: str | None = Field(default=None, alias="TELEGRAM_BOT_TOKEN")
+    telegram_chat_id: str | None = Field(default=None, alias="TELEGRAM_CHAT_ID")
+    anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
+    anthropic_model: str = Field(default="claude-sonnet-4-6", alias="ANTHROPIC_MODEL")
+    news_api_key: str | None = Field(default=None, alias="NEWS_API_KEY")
+    report_time_morning: str = Field(default="09:00", alias="REPORT_TIME_MORNING")
+    report_time_evening: str = Field(default="21:00", alias="REPORT_TIME_EVENING")
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

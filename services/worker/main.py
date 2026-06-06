@@ -1,21 +1,25 @@
 from __future__ import annotations
 
 import json
+import threading
 import time
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import redis
+import schedule
 from sqlalchemy import func, select
 
 from app.core.config import get_settings
-from app.db.models import BotRuntimeState, MarketCandle, MarketSnapshot
+from app.db.models import BotRuntimeState, DecisionLog, MarketCandle, MarketSnapshot
 from app.db.session import get_session_factory
 from app.execution.binance_private import BinanceCredentials, BinancePrivateClient
 from app.market.binance import BinanceMarketClient
 from app.market.importer import insert_market_candles
 from app.market.refresh import refresh_market_data, save_market_snapshot_from_candles
 from app.portfolio.reconciliation import BinancePortfolioReconciler
-from app.worker.cycle import DEFAULT_CANDLE_LIMIT, MIN_SIGNAL_CANDLES, run_worker_cycle
+from app.strategy.signals import BUY, SELL
+from app.worker.cycle import DEFAULT_CANDLE_LIMIT, MIN_SIGNAL_CANDLES, CycleResult, run_worker_cycle
 
 MARKET_CHANNEL = "aurum:market:snapshots"
 
@@ -44,6 +48,7 @@ def main() -> None:
 
     print("Aurum worker started", flush=True)
     _log_startup_readiness(session_factory, settings)
+    _start_report_scheduler(settings)
     while True:
         cycle_started_at = time.monotonic()
         try:
@@ -95,6 +100,8 @@ def main() -> None:
                             f"reason={result.reason}",
                             flush=True,
                         )
+                        if result.decision in {BUY, SELL}:
+                            _notify_trade_decision(session, result, settings)
                         snapshot = save_market_snapshot_from_candles(
                             session,
                             environment=settings.aurum_environment,
@@ -188,6 +195,96 @@ def _publish_snapshot(redis_client: redis.Redis, snapshot: MarketSnapshot) -> No
                 "captured_at": snapshot.captured_at.isoformat(),
             }
         ),
+    )
+
+
+def _notify_trade_decision(session, result: CycleResult, settings) -> None:  # noqa: ANN001
+    if not (settings.telegram_bot_token and settings.telegram_chat_id):
+        return
+    try:
+        from telegram_notifier import notify_buy_executed, notify_sell_executed  # noqa: PLC0415
+
+        decision_log = session.get(DecisionLog, result.decision_id)
+        if decision_log is None:
+            return
+
+        signal = (decision_log.indicators or {}).get("signal", {})
+        order = decision_log.intended_order or {}
+        portfolio = decision_log.portfolio_state or {}
+
+        price = Decimal(signal["close_price"]) if signal.get("close_price") else Decimal("0")
+        quantity = Decimal(order["quantity"]) if order.get("quantity") else Decimal("0")
+        notional = (
+            Decimal(order["quote_quantity"])
+            if order.get("quote_quantity")
+            else price * quantity
+        )
+        sma_short = Decimal(signal["sma_50"]) if signal.get("sma_50") else None
+        sma_long = Decimal(signal["sma_200"]) if signal.get("sma_200") else None
+        executed_at = decision_log.decided_at or datetime.now(UTC)
+
+        if result.decision == BUY:
+            notify_buy_executed(
+                settings.telegram_bot_token,
+                settings.telegram_chat_id,
+                price=price,
+                quantity=quantity,
+                notional=notional,
+                sma_short=sma_short,
+                sma_long=sma_long,
+                executed_at=executed_at,
+            )
+        else:
+            entry_price_str = portfolio.get("position_average_cost")
+            entry_price = Decimal(entry_price_str) if entry_price_str else Decimal("0")
+            notify_sell_executed(
+                settings.telegram_bot_token,
+                settings.telegram_chat_id,
+                price=price,
+                quantity=quantity,
+                notional=notional,
+                entry_price=entry_price,
+                sma_short=sma_short,
+                sma_long=sma_long,
+                executed_at=executed_at,
+            )
+    except Exception as exc:  # noqa: BLE001
+        print(f"Aurum trade notification error: {exc}", flush=True)
+
+
+def _start_report_scheduler(settings) -> None:  # noqa: ANN001
+    if not (settings.telegram_bot_token and settings.telegram_chat_id):
+        print("Aurum market report scheduler: Telegram not configured, skipping", flush=True)
+        return
+
+    from market_report import send_market_report  # noqa: PLC0415
+
+    def _send_report() -> None:
+        try:
+            send_market_report(
+                bot_token=settings.telegram_bot_token,
+                chat_id=settings.telegram_chat_id,
+                anthropic_api_key=settings.anthropic_api_key,
+                news_api_key=settings.news_api_key,
+                anthropic_model=settings.anthropic_model,
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"Aurum market report error: {exc}", flush=True)
+
+    schedule.every().day.at(settings.report_time_morning).do(_send_report)
+    schedule.every().day.at(settings.report_time_evening).do(_send_report)
+
+    def _scheduler_loop() -> None:
+        while True:
+            schedule.run_pending()
+            time.sleep(30)
+
+    thread = threading.Thread(target=_scheduler_loop, daemon=True, name="report-scheduler")
+    thread.start()
+    print(
+        f"Aurum market report scheduler started "
+        f"morning={settings.report_time_morning} evening={settings.report_time_evening}",
+        flush=True,
     )
 
 
