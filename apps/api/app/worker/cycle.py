@@ -46,6 +46,7 @@ from app.strategy.types import (
 )
 
 DEFAULT_CANDLE_LIMIT = 250
+MIN_SIGNAL_CANDLES = 200  # sma_long_period — indicator with the largest lookback window
 
 
 @dataclass(frozen=True)
@@ -436,6 +437,22 @@ def _decide(
         interval=strategy_config.regime_timeframe_primary,
         limit=DEFAULT_CANDLE_LIMIT,
     )
+    if len(signal_candles) < MIN_SIGNAL_CANDLES or len(regime_candles) < MIN_SIGNAL_CANDLES:
+        return {
+            **base_context,
+            **_decision_payload(
+                decision=NO_TRADE,
+                reason="Histórico de candles insuficiente para operar",
+                reason_payload={
+                    "code": "insufficient_candle_history",
+                    "signal_candles": len(signal_candles),
+                    "regime_candles": len(regime_candles),
+                    "minimum_required": MIN_SIGNAL_CANDLES,
+                },
+                trading_mode=_trading_mode(runtime),
+            ),
+        }
+
     signal_snapshot = compute_indicator_snapshot(signal_candles)
     regime_snapshot = compute_indicator_snapshot(regime_candles)
     market_snapshot = (

@@ -12,6 +12,7 @@ app/api/routes/health.py
 app/api/routes/market.py
 app/api/routes/mcp.py
 app/api/routes/operations.py
+app/api/routes/performance.py
 app/api/routes/portfolio.py
 app/bot/__init__.py
 app/bot/control.py
@@ -37,6 +38,8 @@ app/market/refresh.py
 app/mcp/__init__.py
 app/mcp/control.py
 app/mcp/rate_limit.py
+app/performance/__init__.py
+app/performance/service.py
 app/portfolio/__init__.py
 app/portfolio/reconciliation.py
 app/strategy/__init__.py
@@ -63,6 +66,7 @@ tests/test_bot_routes.py
 tests/test_config_control.py
 tests/test_config_routes.py
 tests/test_db_metadata.py
+tests/test_execution_adapters.py
 tests/test_export_routes.py
 tests/test_health.py
 tests/test_market_importer.py
@@ -72,6 +76,7 @@ tests/test_mcp_rate_limit.py
 tests/test_mcp_routes.py
 tests/test_mcp_server.py
 tests/test_order_service.py
+tests/test_performance_service.py
 tests/test_portfolio_reconciliation.py
 tests/test_read_api_routes.py
 tests/test_strategy_backtest.py
