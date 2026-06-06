@@ -460,3 +460,117 @@ class McpAccessLog(Base):
     )
 
     token: Mapped[McpToken | None] = relationship()
+
+
+# --- Backtest models ---
+
+
+class BacktestRun(Base):
+    __tablename__ = "backtest_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "status in ('pending', 'running', 'completed', 'failed')",
+            name="backtest_runs_status",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID_PK, primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    environment: Mapped[str] = mapped_column(String(32), nullable=False, default="testnet")
+    symbol: Mapped[str] = mapped_column(String(24), nullable=False, default="BTCUSDT")
+    signal_interval: Mapped[str] = mapped_column(String(12), nullable=False, default="1h")
+    start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    initial_capital: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    fee_rate: Mapped[Decimal] = mapped_column(PERCENT, nullable=False, default=Decimal("0.001"))
+    strategy_params: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    error_message: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    trades: Mapped[list[BacktestTrade]] = relationship(
+        back_populates="run", cascade="all, delete-orphan"
+    )
+    equity_points: Mapped[list[BacktestEquityPoint]] = relationship(
+        back_populates="run", cascade="all, delete-orphan"
+    )
+    metrics: Mapped[BacktestMetrics | None] = relationship(
+        back_populates="run", cascade="all, delete-orphan", uselist=False
+    )
+
+
+class BacktestTrade(Base):
+    __tablename__ = "backtest_trades"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID_PK, primary_key=True, default=uuid.uuid4)
+    backtest_run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID_PK, ForeignKey("backtest_runs.id", ondelete="CASCADE"), nullable=False
+    )
+    trade_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    entry_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    exit_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    entry_price: Mapped[Decimal] = mapped_column(PRICE, nullable=False)
+    exit_price: Mapped[Decimal] = mapped_column(PRICE, nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(QUANTITY, nullable=False)
+    entry_value: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    exit_value: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    fees_paid: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    pnl_usd: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    return_pct: Mapped[Decimal] = mapped_column(PERCENT, nullable=False)
+    exit_reason: Mapped[str] = mapped_column(String(64), nullable=False)
+    is_winner: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    equity_after: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    run: Mapped[BacktestRun] = relationship(back_populates="trades")
+
+
+class BacktestEquityPoint(Base):
+    __tablename__ = "backtest_equity_points"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID_PK, primary_key=True, default=uuid.uuid4)
+    backtest_run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID_PK, ForeignKey("backtest_runs.id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    equity: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    btc_price: Mapped[Decimal | None] = mapped_column(PRICE)
+    is_in_position: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    run: Mapped[BacktestRun] = relationship(back_populates="equity_points")
+
+
+class BacktestMetrics(Base):
+    __tablename__ = "backtest_metrics"
+
+    backtest_run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID_PK,
+        ForeignKey("backtest_runs.id", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+    )
+    total_return_pct: Mapped[Decimal] = mapped_column(PERCENT, nullable=False)
+    total_return_usd: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    final_capital: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    max_drawdown_pct: Mapped[Decimal] = mapped_column(PERCENT, nullable=False)
+    win_rate_pct: Mapped[Decimal] = mapped_column(PERCENT, nullable=False)
+    profit_factor: Mapped[Decimal | None] = mapped_column(PERCENT)
+    total_trades: Mapped[int] = mapped_column(Integer, nullable=False)
+    winning_trades: Mapped[int] = mapped_column(Integer, nullable=False)
+    losing_trades: Mapped[int] = mapped_column(Integer, nullable=False)
+    avg_win_pct: Mapped[Decimal | None] = mapped_column(PERCENT)
+    avg_loss_pct: Mapped[Decimal | None] = mapped_column(PERCENT)
+    sharpe_ratio: Mapped[Decimal | None] = mapped_column(PERCENT)
+    largest_win_pct: Mapped[Decimal | None] = mapped_column(PERCENT)
+    largest_loss_pct: Mapped[Decimal | None] = mapped_column(PERCENT)
+    avg_trade_duration_hours: Mapped[Decimal | None] = mapped_column(PERCENT)
+    btc_buy_hold_return_pct: Mapped[Decimal | None] = mapped_column(PERCENT)
+
+    run: Mapped[BacktestRun] = relationship(back_populates="metrics")

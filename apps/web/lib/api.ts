@@ -542,3 +542,96 @@ export function compactJson(value: Record<string, unknown>) {
   if (entries.length === 0) return "{}";
   return JSON.stringify(value, null, 2);
 }
+
+// --- Backtest types ---
+
+export type BacktestMetrics = {
+  total_return_pct: string;
+  total_return_usd: string;
+  final_capital: string;
+  max_drawdown_pct: string;
+  win_rate_pct: string;
+  profit_factor: string | null;
+  total_trades: number;
+  winning_trades: number;
+  losing_trades: number;
+  avg_win_pct: string | null;
+  avg_loss_pct: string | null;
+  sharpe_ratio: string | null;
+  largest_win_pct: string | null;
+  largest_loss_pct: string | null;
+  avg_trade_duration_hours: string | null;
+  btc_buy_hold_return_pct: string | null;
+};
+
+export type BacktestTrade = {
+  id: string;
+  trade_index: number;
+  entry_time: string;
+  exit_time: string;
+  entry_price: string;
+  exit_price: string;
+  quantity: string;
+  entry_value: string;
+  exit_value: string;
+  fees_paid: string;
+  pnl_usd: string;
+  return_pct: string;
+  exit_reason: string;
+  is_winner: boolean;
+  equity_after: string;
+};
+
+export type BacktestEquityPoint = {
+  timestamp: string;
+  equity: string;
+  btc_price: string | null;
+  is_in_position: boolean;
+};
+
+export type BacktestRun = {
+  id: string;
+  name: string;
+  environment: string;
+  symbol: string;
+  signal_interval: string;
+  start_date: string;
+  end_date: string;
+  initial_capital: string;
+  fee_rate: string;
+  strategy_params: Record<string, unknown>;
+  status: "pending" | "running" | "completed" | "failed";
+  error_message: string | null;
+  created_at: string;
+  completed_at: string | null;
+  metrics: BacktestMetrics | null;
+};
+
+export type BacktestRunDetail = BacktestRun & {
+  equity_points: BacktestEquityPoint[];
+  trades: BacktestTrade[];
+  trades_total: number;
+};
+
+export type BacktestRunsList = {
+  runs: BacktestRun[];
+};
+
+export type BacktestTradesPage = {
+  run_id: string;
+  trades: BacktestTrade[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type BacktestCompareItem = {
+  id: string;
+  name: string;
+  metrics: BacktestMetrics | null;
+  equity_points: BacktestEquityPoint[];
+};
+
+export type BacktestCompare = {
+  runs: BacktestCompareItem[];
+};

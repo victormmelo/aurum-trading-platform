@@ -458,3 +458,121 @@ class McpStatusResponse(BaseModel):
     auth_enabled: bool
     allowed_scopes: list[McpScope]
     tools: list[str]
+
+
+# --- Backtest schemas ---
+
+
+class BacktestRunRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    start_date: datetime
+    end_date: datetime
+    initial_capital: Decimal = Field(gt=0)
+    fee_rate: Decimal = Field(default=Decimal("0.001"), ge=0, le=1)
+    signal_interval: str = Field(default="1h")
+
+
+class BacktestMetricsResponse(BaseModel):
+    total_return_pct: Decimal
+    total_return_usd: Decimal
+    final_capital: Decimal
+    max_drawdown_pct: Decimal
+    win_rate_pct: Decimal
+    profit_factor: Decimal | None
+    total_trades: int
+    winning_trades: int
+    losing_trades: int
+    avg_win_pct: Decimal | None
+    avg_loss_pct: Decimal | None
+    sharpe_ratio: Decimal | None
+    largest_win_pct: Decimal | None
+    largest_loss_pct: Decimal | None
+    avg_trade_duration_hours: Decimal | None
+    btc_buy_hold_return_pct: Decimal | None
+
+
+class BacktestTradeResponse(BaseModel):
+    id: UUID
+    trade_index: int
+    entry_time: datetime
+    exit_time: datetime
+    entry_price: Decimal
+    exit_price: Decimal
+    quantity: Decimal
+    entry_value: Decimal
+    exit_value: Decimal
+    fees_paid: Decimal
+    pnl_usd: Decimal
+    return_pct: Decimal
+    exit_reason: str
+    is_winner: bool
+    equity_after: Decimal
+
+
+class BacktestEquityPointResponse(BaseModel):
+    timestamp: datetime
+    equity: Decimal
+    btc_price: Decimal | None
+    is_in_position: bool
+
+
+class BacktestRunSummaryResponse(BaseModel):
+    id: UUID
+    name: str
+    environment: str
+    symbol: str
+    signal_interval: str
+    start_date: datetime
+    end_date: datetime
+    initial_capital: Decimal
+    fee_rate: Decimal
+    strategy_params: dict
+    status: str
+    error_message: str | None
+    created_at: datetime
+    completed_at: datetime | None
+    metrics: BacktestMetricsResponse | None
+
+
+class BacktestRunDetailResponse(BaseModel):
+    id: UUID
+    name: str
+    environment: str
+    symbol: str
+    signal_interval: str
+    start_date: datetime
+    end_date: datetime
+    initial_capital: Decimal
+    fee_rate: Decimal
+    strategy_params: dict
+    status: str
+    error_message: str | None
+    created_at: datetime
+    completed_at: datetime | None
+    metrics: BacktestMetricsResponse | None
+    equity_points: list[BacktestEquityPointResponse]
+    trades: list[BacktestTradeResponse]
+    trades_total: int
+
+
+class BacktestRunsListResponse(BaseModel):
+    runs: list[BacktestRunSummaryResponse]
+
+
+class BacktestTradesPageResponse(BaseModel):
+    run_id: UUID
+    trades: list[BacktestTradeResponse]
+    total: int
+    page: int
+    page_size: int
+
+
+class BacktestCompareItemResponse(BaseModel):
+    id: UUID
+    name: str
+    metrics: BacktestMetricsResponse | None
+    equity_points: list[BacktestEquityPointResponse]
+
+
+class BacktestCompareResponse(BaseModel):
+    runs: list[BacktestCompareItemResponse]

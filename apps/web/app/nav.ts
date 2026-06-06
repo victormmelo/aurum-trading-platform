@@ -1,5 +1,6 @@
 import {
   Activity,
+  BarChart2,
   Bot,
   FileDown,
   Gauge,
@@ -18,6 +19,7 @@ export const navItems = [
   { label: "Carteira", href: "/portfolio", icon: Wallet },
   { label: "Operações", href: "/operations", icon: Activity },
   { label: "Performance", href: "/performance", icon: ReceiptText },
+  { label: "Backtest", href: "/backtest", icon: BarChart2 },
   { label: "Decisões", href: "/decisions", icon: Bot },
   { label: "Estratégias", href: "/configs", icon: Settings2 },
   { label: "MCP", href: "/mcp", icon: KeyRound },

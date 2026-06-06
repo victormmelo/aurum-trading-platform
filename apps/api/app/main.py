@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api.routes.backtest import router as backtest_router
 from app.api.routes.bot import router as bot_router
 from app.api.routes.configs import router as configs_router
 from app.api.routes.decisions import router as decisions_router
@@ -31,6 +32,7 @@ def create_app() -> FastAPI:
     app.include_router(decisions_router)
     app.include_router(exports_router)
     app.include_router(mcp_router)
+    app.include_router(backtest_router)
     return app
 
 
