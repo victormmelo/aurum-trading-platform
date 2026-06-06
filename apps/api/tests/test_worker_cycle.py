@@ -83,6 +83,44 @@ def test_worker_cycle_records_no_trade_without_active_configs() -> None:
     }
 
 
+def test_worker_cycle_no_trade_when_signal_candles_insufficient() -> None:
+    store = FakeStore(
+        runtime=BotRuntimeState(environment="testnet", status="running", trading_mode="testnet"),
+        strategy_config=_strategy_config(),
+        risk_config=_risk_config(),
+        portfolio=_portfolio_snapshot(),
+        candles_by_interval={"1h": [_candle()], "4h": _candles(200)},
+    )
+
+    result = run_dry_run_cycle(store, environment="testnet", symbol="BTCUSDT", now=NOW)
+
+    assert result.status == "completed"
+    assert result.decision == "NAO_OPERAR"
+    assert store.decisions[0].reason_payload["code"] == "insufficient_candle_history"
+    assert store.decisions[0].reason_payload["signal_candles"] == 1
+    assert store.decisions[0].reason_payload["minimum_required"] == 200
+    assert store.market_snapshots == []
+
+
+def test_worker_cycle_no_trade_when_regime_candles_insufficient() -> None:
+    store = FakeStore(
+        runtime=BotRuntimeState(environment="testnet", status="running", trading_mode="testnet"),
+        strategy_config=_strategy_config(),
+        risk_config=_risk_config(),
+        portfolio=_portfolio_snapshot(),
+        candles_by_interval={"1h": _candles(200), "4h": [_candle()]},
+    )
+
+    result = run_dry_run_cycle(store, environment="testnet", symbol="BTCUSDT", now=NOW)
+
+    assert result.status == "completed"
+    assert result.decision == "NAO_OPERAR"
+    assert store.decisions[0].reason_payload["code"] == "insufficient_candle_history"
+    assert store.decisions[0].reason_payload["regime_candles"] == 1
+    assert store.decisions[0].reason_payload["minimum_required"] == 200
+    assert store.market_snapshots == []
+
+
 def test_worker_cycle_persists_buy_decision_in_dry_run(monkeypatch) -> None:  # noqa: ANN001
     store = FakeStore(
         runtime=BotRuntimeState(
@@ -93,7 +131,7 @@ def test_worker_cycle_persists_buy_decision_in_dry_run(monkeypatch) -> None:  # 
         strategy_config=_strategy_config(),
         risk_config=_risk_config(),
         portfolio=_portfolio_snapshot(),
-        candles_by_interval={"1h": [_candle()], "4h": [_candle()]},
+        candles_by_interval={"1h": _candles(200), "4h": _candles(200)},
     )
 
     monkeypatch.setattr(cycle, "compute_indicator_snapshot", lambda candles: _snapshot())
@@ -170,7 +208,7 @@ def test_worker_cycle_executes_allowed_testnet_buy_with_order_service(monkeypatc
         strategy_config=_strategy_config(),
         risk_config=_risk_config(),
         portfolio=_portfolio_snapshot(),
-        candles_by_interval={"1h": [_candle()], "4h": [_candle()]},
+        candles_by_interval={"1h": _candles(200), "4h": _candles(200)},
     )
     order_service = FakeOrderService()
 
@@ -469,3 +507,18 @@ def _candle() -> StrategyCandle:
         close_price=Decimal("100000"),
         volume=Decimal("20"),
     )
+
+
+def _candles(n: int) -> list[StrategyCandle]:
+    return [
+        StrategyCandle(
+            open_time=NOW - timedelta(hours=n - i),
+            close_time=NOW - timedelta(hours=n - i - 1),
+            open_price=Decimal("99000"),
+            high_price=Decimal("100000"),
+            low_price=Decimal("98000"),
+            close_price=Decimal("100000"),
+            volume=Decimal("20"),
+        )
+        for i in range(n)
+    ]

@@ -5,10 +5,10 @@ import time
 from datetime import UTC, datetime
 
 import redis
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.config import get_settings
-from app.db.models import BotRuntimeState, MarketSnapshot
+from app.db.models import BotRuntimeState, MarketCandle, MarketSnapshot
 from app.db.session import get_session_factory
 from app.execution.binance_private import BinanceCredentials, BinancePrivateClient
 from app.market.binance import BinanceMarketClient
@@ -39,9 +39,10 @@ def main() -> None:
         BinancePortfolioReconciler(private_client) if private_client is not None else None
     )
     redis_client = redis.Redis.from_url(settings.redis_url, decode_responses=True)
-    last_worker_cycle_at = 0.0
+    last_worker_cycle_at = time.monotonic()
 
     print("Aurum worker started", flush=True)
+    _log_startup_readiness(session_factory, settings)
     while True:
         cycle_started_at = time.monotonic()
         try:
@@ -110,6 +111,31 @@ def main() -> None:
 
         elapsed = time.monotonic() - cycle_started_at
         time.sleep(max(1, settings.market_poll_seconds - elapsed))
+
+
+def _log_startup_readiness(session_factory, settings) -> None:  # noqa: ANN001
+    _MIN_CANDLES = 200  # noqa: N806
+    intervals = ["1h", "4h", "1d"]
+    try:
+        with session_factory() as session:
+            counts = {}
+            for interval in intervals:
+                counts[interval] = session.scalar(
+                    select(func.count()).select_from(MarketCandle).where(
+                        MarketCandle.environment == settings.aurum_environment,
+                        MarketCandle.symbol == settings.trading_symbol,
+                        MarketCandle.interval == interval,
+                    )
+                ) or 0
+        is_ready = all(c >= _MIN_CANDLES for c in counts.values())
+        mode = "operational" if is_ready else "collecting"
+        print(
+            f"Aurum data readiness candles={counts} min_required={_MIN_CANDLES} "
+            f"ready={is_ready} mode={mode}",
+            flush=True,
+        )
+    except Exception as exc:  # noqa: BLE001
+        print(f"Aurum data readiness check failed: {exc}", flush=True)
 
 
 def _publish_snapshot(redis_client: redis.Redis, snapshot: MarketSnapshot) -> None:
