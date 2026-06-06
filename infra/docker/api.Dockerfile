@@ -7,7 +7,8 @@ WORKDIR /workspace
 
 COPY apps/api ./apps/api
 COPY services ./services
-RUN pip install --no-cache-dir -e ./apps/api
+RUN pip install --no-cache-dir setuptools && \
+    pip install --no-cache-dir --no-build-isolation -e ./apps/api
 
 WORKDIR /workspace
 
