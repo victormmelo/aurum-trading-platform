@@ -7,7 +7,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.backtest.store import SqlAlchemyBacktestStore
-from app.core.config import get_settings
 from app.db.models import (
     BacktestEquityPoint as BacktestEquityPointORM,
 )
@@ -40,12 +39,9 @@ def execute_backtest(run_id: uuid.UUID, session: Session) -> None:
         _backfill_candles(session, run)
 
         signal_candles = _load_candles(session, run, interval=run.signal_interval)
-        regime_candles_4h = _load_candles(session, run, interval="4h")
-        regime_candles_1d = _load_candles(session, run, interval="1d")
-        regime_candles = sorted(
-            regime_candles_4h + regime_candles_1d,
-            key=lambda c: c.close_time,
-        )
+        # Regime uses daily candles: SMA-50/200 then represent 50 and 200 real days.
+        # Mixing 4h+1d in one list makes SMA periods meaningless (~28 days instead of 200).
+        regime_candles = _load_candles(session, run, interval="1d")
 
         result = run_multi_trade_backtest(
             signal_candles,
@@ -131,9 +127,12 @@ def execute_backtest(run_id: uuid.UUID, session: Session) -> None:
             pass
 
 
+_BINANCE_PUBLIC_BASE_URL = "https://api.binance.com/api/v3"
+
+
 def _backfill_candles(session: Session, run: BacktestRun) -> None:
-    settings = get_settings()
-    client = BinanceMarketClient(settings.binance_spot_base_url)
+    # Always use the public Binance API for market data — Testnet has no historical candles
+    client = BinanceMarketClient(_BINANCE_PUBLIC_BASE_URL)
     intervals = _required_intervals(run.signal_interval)
 
     # Paginate to cover the full date range (Binance max 1000 per call)
@@ -201,8 +200,6 @@ def _load_candles(session: Session, run: BacktestRun, interval: str) -> list[Str
 
 def _required_intervals(signal_interval: str) -> list[str]:
     base = [signal_interval]
-    if "4h" not in base:
-        base.append("4h")
     if "1d" not in base:
         base.append("1d")
     return base

@@ -17,8 +17,8 @@ export async function createBacktestRun(formData: FormData) {
 
   const payload = {
     name,
-    start_date: new Date(start_date).toISOString(),
-    end_date: new Date(end_date).toISOString(),
+    start_date: `${start_date}T12:00:00Z`,
+    end_date: `${end_date}T12:00:00Z`,
     initial_capital: Number(initial_capital),
     fee_rate: Number(fee_rate),
     signal_interval: "1h",
