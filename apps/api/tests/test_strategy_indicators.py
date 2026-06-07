@@ -24,6 +24,43 @@ def test_indicator_snapshot_calculates_mvp_values() -> None:
     assert snapshot.breakout_high_20 == Decimal("201")
     assert snapshot.rsi == Decimal("100")
     assert snapshot.atr == Decimal("2")
+    # 201 candles < 200 + 20 = 220 required for slope
+    assert snapshot.sma_long_prev is None
+    # two candles available → true range computed
+    assert snapshot.current_true_range is not None
+
+
+def test_sma_long_prev_computed_when_sufficient_candles() -> None:
+    # Need 200 + 20 = 220 candles for sma_long_prev with defaults
+    candles = [_candle(index, Decimal(index), volume=Decimal("10")) for index in range(1, 222)]
+
+    snapshot = compute_indicator_snapshot(candles)
+
+    assert snapshot is not None
+    # current sma_200: average of closes[-200:] = closes[21..220] = avg(22..221)
+    # sma_long_prev: average of closes[-220:-20] = closes[1..200] = avg(2..201)
+    assert snapshot.sma_200 is not None
+    assert snapshot.sma_long_prev is not None
+    # With an ascending price series, current SMA-200 > prev SMA-200
+    assert snapshot.sma_200 > snapshot.sma_long_prev
+
+
+def test_current_true_range_computed() -> None:
+    # Candle: high=102, low=98, close=100; prev close=90 → TR = max(4, 12, 8) = 12
+    prev = _candle(1, Decimal("90"), high=Decimal("92"), low=Decimal("88"))
+    curr = _candle(2, Decimal("100"), high=Decimal("102"), low=Decimal("98"))
+
+    snapshot = compute_indicator_snapshot([prev, curr])
+
+    assert snapshot is not None
+    assert snapshot.current_true_range == Decimal("12")
+
+
+def test_current_true_range_is_none_for_single_candle() -> None:
+    snapshot = compute_indicator_snapshot([_candle(1, Decimal("100"))])
+
+    assert snapshot is not None
+    assert snapshot.current_true_range is None
 
 
 def test_indicators_return_none_when_history_is_insufficient() -> None:
@@ -35,14 +72,21 @@ def test_indicators_return_none_when_history_is_insufficient() -> None:
     assert breakout_high(candles, 20) is None
 
 
-def _candle(index: int, close: Decimal, *, volume: Decimal = Decimal("1")) -> StrategyCandle:
+def _candle(
+    index: int,
+    close: Decimal,
+    *,
+    volume: Decimal = Decimal("1"),
+    high: Decimal | None = None,
+    low: Decimal | None = None,
+) -> StrategyCandle:
     opened_at = datetime(2026, 1, 1, tzinfo=UTC) + timedelta(hours=index)
     return StrategyCandle(
         open_time=opened_at,
         close_time=opened_at + timedelta(hours=1),
         open_price=close,
-        high_price=close + Decimal("1"),
-        low_price=close - Decimal("1"),
+        high_price=high if high is not None else close + Decimal("1"),
+        low_price=low if low is not None else close - Decimal("1"),
         close_price=close,
         volume=volume,
     )

@@ -14,8 +14,7 @@ def evaluate_breakout_entry_signal(
     snapshot: IndicatorSnapshot | None,
     regime: RegimeResult,
     *,
-    min_rsi: Decimal = Decimal("50"),
-    max_rsi: Decimal = Decimal("75"),
+    atr_stop_multiplier: Decimal = Decimal("2.5"),
 ) -> SignalResult:
     if not regime.allowed:
         return _no_trade("Regime bloqueia novas entradas", "regime_blocked", regime.reason_payload)
@@ -25,30 +24,18 @@ def evaluate_breakout_entry_signal(
 
     payload: dict[str, object] = {
         "close_price": str(snapshot.close_price),
-        "current_volume": str(snapshot.current_volume),
         "breakout_high_20": str(snapshot.breakout_high_20)
         if snapshot.breakout_high_20 is not None
         else None,
-        "average_volume": str(snapshot.average_volume)
-        if snapshot.average_volume is not None
+        "atr": str(snapshot.atr) if snapshot.atr is not None else None,
+        "current_true_range": str(snapshot.current_true_range)
+        if snapshot.current_true_range is not None
         else None,
-        "rsi": str(snapshot.rsi) if snapshot.rsi is not None else None,
-        "min_rsi": str(min_rsi),
-        "max_rsi": str(max_rsi),
+        "atr_stop_multiplier": str(atr_stop_multiplier),
     }
 
     if snapshot.breakout_high_20 is None:
         return _no_trade("Dados insuficientes para breakout", "missing_breakout_high", payload)
-
-    if snapshot.average_volume is None:
-        return _no_trade(
-            "Dados insuficientes para média de volume",
-            "missing_average_volume",
-            payload,
-        )
-
-    if snapshot.rsi is None:
-        return _no_trade("Dados insuficientes para RSI", "missing_rsi", payload)
 
     if snapshot.close_price <= snapshot.breakout_high_20:
         return _no_trade(
@@ -57,15 +44,17 @@ def evaluate_breakout_entry_signal(
             payload,
         )
 
-    if snapshot.current_volume <= snapshot.average_volume:
-        return _no_trade("Volume do rompimento abaixo da média recente", "weak_volume", payload)
-
-    if snapshot.rsi < min_rsi or snapshot.rsi > max_rsi:
-        return _no_trade("RSI fora da faixa permitida para entrada", "rsi_out_of_range", payload)
+    if (
+        snapshot.current_true_range is not None
+        and snapshot.atr is not None
+        and snapshot.atr > 0
+        and snapshot.current_true_range > snapshot.atr * atr_stop_multiplier
+    ):
+        return _no_trade("Candle de exaustão detectado no breakout", "exhaustion_candle", payload)
 
     return SignalResult(
         decision=BUY,
-        reason="Breakout confirmado com regime, volume e RSI válidos",
+        reason="Breakout confirmado com regime válido e sem exaustão",
         reason_payload={"code": "breakout_entry", **payload},
     )
 

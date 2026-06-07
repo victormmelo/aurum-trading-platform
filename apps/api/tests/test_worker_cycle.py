@@ -108,7 +108,7 @@ def test_worker_cycle_no_trade_when_regime_candles_insufficient() -> None:
         strategy_config=_strategy_config(),
         risk_config=_risk_config(),
         portfolio=_portfolio_snapshot(),
-        candles_by_interval={"1h": _candles(200), "4h": [_candle()]},
+        candles_by_interval={"1h": _candles(200), "1d": [_candle()]},
     )
 
     result = run_dry_run_cycle(store, environment="testnet", symbol="BTCUSDT", now=NOW)
@@ -131,10 +131,10 @@ def test_worker_cycle_persists_buy_decision_in_dry_run(monkeypatch) -> None:  # 
         strategy_config=_strategy_config(),
         risk_config=_risk_config(),
         portfolio=_portfolio_snapshot(),
-        candles_by_interval={"1h": _candles(200), "4h": _candles(200)},
+        candles_by_interval={"1h": _candles(200), "1d": _candles(200)},
     )
 
-    monkeypatch.setattr(cycle, "compute_indicator_snapshot", lambda candles: _snapshot())
+    monkeypatch.setattr(cycle, "compute_indicator_snapshot", lambda candles, **kw: _snapshot())
     monkeypatch.setattr(
         cycle,
         "evaluate_regime",
@@ -143,7 +143,7 @@ def test_worker_cycle_persists_buy_decision_in_dry_run(monkeypatch) -> None:  # 
     monkeypatch.setattr(
         cycle,
         "evaluate_breakout_entry_signal",
-        lambda snapshot, regime: SignalResult(
+        lambda snapshot, regime, **kw: SignalResult(
             "COMPRA",
             "Breakout confirmado",
             {"code": "breakout_entry"},
@@ -208,11 +208,11 @@ def test_worker_cycle_executes_allowed_testnet_buy_with_order_service(monkeypatc
         strategy_config=_strategy_config(),
         risk_config=_risk_config(),
         portfolio=_portfolio_snapshot(),
-        candles_by_interval={"1h": _candles(200), "4h": _candles(200)},
+        candles_by_interval={"1h": _candles(200), "1d": _candles(200)},
     )
     order_service = FakeOrderService()
 
-    monkeypatch.setattr(cycle, "compute_indicator_snapshot", lambda candles: _snapshot())
+    monkeypatch.setattr(cycle, "compute_indicator_snapshot", lambda candles, **kw: _snapshot())
     monkeypatch.setattr(
         cycle,
         "evaluate_regime",
@@ -221,7 +221,7 @@ def test_worker_cycle_executes_allowed_testnet_buy_with_order_service(monkeypatc
     monkeypatch.setattr(
         cycle,
         "evaluate_breakout_entry_signal",
-        lambda snapshot, regime: SignalResult(
+        lambda snapshot, regime, **kw: SignalResult(
             "COMPRA",
             "Breakout confirmado",
             {"code": "breakout_entry"},

@@ -92,7 +92,9 @@ def test_performance_summary_period_without_sells_keeps_open_pnl_visible() -> No
 
 def test_performance_summary_all_period_and_trade_filtering() -> None:
     old_sell = _fill("SELL", NOW - timedelta(days=100), quantity="0.010", price="130", quote="1.30")
-    recent_sell = _fill("SELL", NOW - timedelta(days=1), quantity="0.010", price="140", quote="1.40")
+    recent_sell = _fill(
+        "SELL", NOW - timedelta(days=1), quantity="0.010", price="140", quote="1.40"
+    )
     store = FakePerformanceStore(
         fills=[
             _fill("BUY", NOW - timedelta(days=120), quantity="0.020", price="100", quote="2.00"),

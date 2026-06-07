@@ -27,7 +27,8 @@ def test_backtest_returns_empty_metrics_without_candles() -> None:
 
 
 def _backtest_fixture() -> list[StrategyCandle]:
-    closes = [Decimal("90")] * 185
+    # 223 candles: 205 flat + 18 variable; need ≥220 for sma_long_prev (slope) in regime v2
+    closes = [Decimal("90")] * 205
     closes += [
         Decimal("100"),
         Decimal("90"),

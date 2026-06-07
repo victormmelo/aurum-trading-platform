@@ -10,8 +10,8 @@ from app.core.config import get_settings
 from app.core.schemas import (
     PerformanceDailyPointResponse,
     PerformanceSummaryResponse,
-    PerformanceTradesResponse,
     PerformanceTradeResponse,
+    PerformanceTradesResponse,
 )
 from app.db.models import Order, OrderFill, PortfolioSnapshot
 from app.db.session import get_db_session

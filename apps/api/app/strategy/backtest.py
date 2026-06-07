@@ -36,6 +36,9 @@ def run_breakout_backtest(
     *,
     initial_cash: Decimal = Decimal("10000"),
     fee_rate: Decimal = Decimal("0"),
+    atr_stop_multiplier: Decimal = Decimal("2.5"),
+    sma_long_period: int = 200,
+    sma_slope_lookback: int = 20,
 ) -> BacktestResult:
     if not signal_candles:
         return BacktestResult(
@@ -63,9 +66,15 @@ def run_breakout_backtest(
         regime_history = [item for item in regime_candles if item.close_time <= candle.close_time]
 
         signal_snapshot = compute_indicator_snapshot(signal_history)
-        regime_snapshot = compute_indicator_snapshot(regime_history)
+        regime_snapshot = compute_indicator_snapshot(
+            regime_history,
+            sma_long_period=sma_long_period,
+            sma_slope_lookback=sma_slope_lookback,
+        )
         regime = evaluate_regime(regime_snapshot)
-        signal = evaluate_breakout_entry_signal(signal_snapshot, regime)
+        signal = evaluate_breakout_entry_signal(
+            signal_snapshot, regime, atr_stop_multiplier=atr_stop_multiplier
+        )
 
         if quantity == 0 and signal.decision == BUY:
             gross_cash = cash * (Decimal("1") - fee_rate)
@@ -127,6 +136,12 @@ def run_multi_trade_backtest(
     *,
     initial_cash: Decimal = Decimal("10000"),
     fee_rate: Decimal = Decimal("0.001"),
+    breakout_lookback: int = 20,
+    atr_period: int = 14,
+    atr_stop_multiplier: Decimal = Decimal("2.5"),
+    trailing_stop_multiplier: Decimal = Decimal("3.0"),
+    sma_long_period: int = 200,
+    sma_slope_lookback: int = 20,
 ) -> FullBacktestResult:
     """Multi-trade backtest engine supporting multiple open/close cycles."""
     if not signal_candles:
@@ -159,12 +174,23 @@ def run_multi_trade_backtest(
         cutoff = bisect_right(regime_close_times, candle.close_time)
         regime_window = regime_sorted[max(0, cutoff - _INDICATOR_WINDOW) : cutoff]
 
-        signal_snapshot = compute_indicator_snapshot(list(signal_window))
-        regime_snapshot = compute_indicator_snapshot(regime_window)
+        signal_snapshot = compute_indicator_snapshot(
+            list(signal_window),
+            atr_period=atr_period,
+            breakout_lookback=breakout_lookback,
+        )
+        regime_snapshot = compute_indicator_snapshot(
+            regime_window,
+            sma_long_period=sma_long_period,
+            sma_slope_lookback=sma_slope_lookback,
+            atr_period=atr_period,
+        )
         regime = evaluate_regime(regime_snapshot)
 
         if quantity == 0:
-            signal = evaluate_breakout_entry_signal(signal_snapshot, regime)
+            signal = evaluate_breakout_entry_signal(
+                signal_snapshot, regime, atr_stop_multiplier=atr_stop_multiplier
+            )
             if signal.decision == BUY:
                 entry_fee_paid = cash * fee_rate
                 invested = cash - entry_fee_paid
@@ -175,15 +201,21 @@ def run_multi_trade_backtest(
                 highest_price = candle.close_price
                 cash = Decimal("0")
         else:
-            if candle.close_price > highest_price:
-                highest_price = candle.close_price
+            if candle.high_price > highest_price:
+                highest_price = candle.high_price
 
             position_state = ExitPositionState(
                 quantity=quantity,
                 entry_price=entry_price,  # type: ignore[arg-type]
                 highest_price_since_entry=highest_price,
             )
-            exit_signal = evaluate_exit_signal(signal_snapshot, position_state)
+            exit_signal = evaluate_exit_signal(
+                signal_snapshot,
+                position_state,
+                regime,
+                atr_stop_multiplier=atr_stop_multiplier,
+                trailing_stop_multiplier=trailing_stop_multiplier,
+            )
 
             if exit_signal.decision == SELL:
                 (

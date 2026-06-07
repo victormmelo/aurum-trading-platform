@@ -27,6 +27,8 @@ class IndicatorSnapshot:
     atr_pct: Decimal | None
     average_volume: Decimal | None
     breakout_high_20: Decimal | None
+    sma_long_prev: Decimal | None = None
+    current_true_range: Decimal | None = None
 
 
 @dataclass(frozen=True)

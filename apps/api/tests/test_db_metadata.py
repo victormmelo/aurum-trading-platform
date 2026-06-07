@@ -7,6 +7,10 @@ from app.db.base import Base
 def test_operational_schema_tables_are_registered() -> None:
     expected_tables = {
         "audit_logs",
+        "backtest_equity_points",
+        "backtest_metrics",
+        "backtest_runs",
+        "backtest_trades",
         "bot_runs",
         "bot_runtime_state",
         "decision_logs",

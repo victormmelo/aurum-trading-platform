@@ -425,16 +425,25 @@ def _decide(
             ),
         }
 
+    params = strategy_config.parameters or {}
+    breakout_lookback = int(params.get("breakout_lookback", 20))
+    atr_period = int(params.get("atr_period", 14))
+    atr_stop_multiplier = Decimal(str(params.get("atr_stop_multiplier", "2.5")))
+    trailing_stop_multiplier = Decimal(str(params.get("trailing_stop_multiplier", "3.0")))
+    sma_long_period = int(params.get("sma_long_period", 200))
+    sma_slope_lookback = int(params.get("sma_slope_lookback", 20))
+
     signal_candles = store.get_recent_candles(
         environment=environment,
         symbol=symbol,
         interval=strategy_config.signal_timeframe,
         limit=DEFAULT_CANDLE_LIMIT,
     )
+    # Regime always uses 1d candles so SMA-200 represents 200 real days (v2 fix)
     regime_candles = store.get_recent_candles(
         environment=environment,
         symbol=symbol,
-        interval=strategy_config.regime_timeframe_primary,
+        interval="1d",
         limit=DEFAULT_CANDLE_LIMIT,
     )
     if len(signal_candles) < MIN_SIGNAL_CANDLES or len(regime_candles) < MIN_SIGNAL_CANDLES:
@@ -453,8 +462,17 @@ def _decide(
             ),
         }
 
-    signal_snapshot = compute_indicator_snapshot(signal_candles)
-    regime_snapshot = compute_indicator_snapshot(regime_candles)
+    signal_snapshot = compute_indicator_snapshot(
+        signal_candles,
+        atr_period=atr_period,
+        breakout_lookback=breakout_lookback,
+    )
+    regime_snapshot = compute_indicator_snapshot(
+        regime_candles,
+        sma_long_period=sma_long_period,
+        sma_slope_lookback=sma_slope_lookback,
+        atr_period=atr_period,
+    )
     market_snapshot = (
         store.save_market_snapshot(
             environment=environment,
@@ -472,7 +490,14 @@ def _decide(
     }
     base_context = {**base_context, "market_snapshot": market_snapshot, "indicators": indicators}
 
-    candidate = _candidate_decision(signal_snapshot, regime_snapshot, position, signal_candles)
+    candidate = _candidate_decision(
+        signal_snapshot,
+        regime_snapshot,
+        position,
+        signal_candles,
+        atr_stop_multiplier=atr_stop_multiplier,
+        trailing_stop_multiplier=trailing_stop_multiplier,
+    )
     final = _apply_sizing_and_risk(
         candidate,
         runtime=runtime,
@@ -502,18 +527,32 @@ def _candidate_decision(
     regime_snapshot: IndicatorSnapshot | None,
     position: Position | None,
     signal_candles: Sequence[StrategyCandle],
+    *,
+    atr_stop_multiplier: Decimal,
+    trailing_stop_multiplier: Decimal,
 ) -> SignalResult:
+    regime = evaluate_regime(regime_snapshot)
+
     if position is not None and position.quantity > 0:
-        highest_price = _highest_price_since_loaded(position, signal_candles)
+        highest_price = _highest_price_since_entry(position, signal_candles)
         exit_position = ExitPositionState(
             quantity=position.quantity,
             entry_price=position.average_cost,
             highest_price_since_entry=highest_price,
         )
-        return evaluate_exit_signal(signal_snapshot, exit_position)
+        return evaluate_exit_signal(
+            signal_snapshot,
+            exit_position,
+            regime,
+            atr_stop_multiplier=atr_stop_multiplier,
+            trailing_stop_multiplier=trailing_stop_multiplier,
+        )
 
-    regime = evaluate_regime(regime_snapshot)
-    return evaluate_breakout_entry_signal(signal_snapshot, regime)
+    return evaluate_breakout_entry_signal(
+        signal_snapshot,
+        regime,
+        atr_stop_multiplier=atr_stop_multiplier,
+    )
 
 
 def _apply_sizing_and_risk(
@@ -775,6 +814,9 @@ def _snapshot_payload(snapshot: IndicatorSnapshot | None) -> dict[str, object]:
         "current_volume": str(snapshot.current_volume),
         "sma_50": str(snapshot.sma_50) if snapshot.sma_50 is not None else None,
         "sma_200": str(snapshot.sma_200) if snapshot.sma_200 is not None else None,
+        "sma_long_prev": str(snapshot.sma_long_prev)
+        if snapshot.sma_long_prev is not None
+        else None,
         "rsi": str(snapshot.rsi) if snapshot.rsi is not None else None,
         "atr": str(snapshot.atr) if snapshot.atr is not None else None,
         "atr_pct": str(snapshot.atr_pct) if snapshot.atr_pct is not None else None,
@@ -783,6 +825,9 @@ def _snapshot_payload(snapshot: IndicatorSnapshot | None) -> dict[str, object]:
         else None,
         "breakout_high_20": str(snapshot.breakout_high_20)
         if snapshot.breakout_high_20 is not None
+        else None,
+        "current_true_range": str(snapshot.current_true_range)
+        if snapshot.current_true_range is not None
         else None,
     }
 
@@ -803,10 +848,11 @@ def _portfolio_payload(
     }
 
 
-def _highest_price_since_loaded(
+def _highest_price_since_entry(
     position: Position,
     signal_candles: Sequence[StrategyCandle],
 ) -> Decimal:
-    if not signal_candles:
+    relevant = [c for c in signal_candles if c.open_time >= position.created_at]
+    if not relevant:
         return position.average_cost
-    return max(position.average_cost, *(candle.high_price for candle in signal_candles))
+    return max(position.average_cost, *(c.high_price for c in relevant))

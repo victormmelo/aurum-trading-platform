@@ -3,15 +3,16 @@ from __future__ import annotations
 from decimal import Decimal
 
 from app.strategy.signals import HOLD, SELL
-from app.strategy.types import ExitPositionState, IndicatorSnapshot, SignalResult
+from app.strategy.types import ExitPositionState, IndicatorSnapshot, RegimeResult, SignalResult
 
 
 def evaluate_exit_signal(
     snapshot: IndicatorSnapshot | None,
     position: ExitPositionState | None,
+    regime: RegimeResult | None = None,
     *,
-    atr_stop_multiplier: Decimal = Decimal("2"),
-    trailing_stop_multiplier: Decimal = Decimal("3"),
+    atr_stop_multiplier: Decimal = Decimal("2.5"),
+    trailing_stop_multiplier: Decimal = Decimal("3.0"),
 ) -> SignalResult:
     if position is None or position.quantity <= 0:
         return _hold("Sem posição long aberta para gerenciar", "no_open_position", {})
@@ -24,38 +25,22 @@ def evaluate_exit_signal(
         "trailing_stop_multiplier": str(trailing_stop_multiplier),
     }
 
+    if regime is not None and not regime.allowed:
+        return _sell(
+            "Regime desativado: encerrar posição",
+            "regime_exit",
+            {**payload, "regime_reason": regime.reason_payload},
+        )
+
     if snapshot is None:
         return _hold("Dados de saída insuficientes", "missing_snapshot", payload)
 
     payload.update(
         {
             "close_price": str(snapshot.close_price),
-            "sma_50": str(snapshot.sma_50) if snapshot.sma_50 is not None else None,
-            "sma_200": str(snapshot.sma_200) if snapshot.sma_200 is not None else None,
             "atr": str(snapshot.atr) if snapshot.atr is not None else None,
         }
     )
-
-    if snapshot.sma_50 is None or snapshot.sma_200 is None:
-        return _hold(
-            "Dados insuficientes para avaliar perda de tendência",
-            "missing_trend",
-            payload,
-        )
-
-    if snapshot.close_price <= snapshot.sma_200:
-        return _sell(
-            "Preço perdeu a média de 200 períodos",
-            "trend_exit_price_below_sma_200",
-            payload,
-        )
-
-    if snapshot.sma_50 <= snapshot.sma_200:
-        return _sell(
-            "Média de 50 períodos perdeu a média de 200 períodos",
-            "trend_exit_sma_cross",
-            payload,
-        )
 
     if snapshot.atr is None or snapshot.atr <= 0:
         return _hold("Dados insuficientes para stops por ATR", "missing_atr", payload)
