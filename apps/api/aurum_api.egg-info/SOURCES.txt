@@ -4,6 +4,7 @@ app/__init__.py
 app/main.py
 app/api/__init__.py
 app/api/routes/__init__.py
+app/api/routes/backtest.py
 app/api/routes/bot.py
 app/api/routes/configs.py
 app/api/routes/decisions.py
@@ -14,6 +15,9 @@ app/api/routes/mcp.py
 app/api/routes/operations.py
 app/api/routes/performance.py
 app/api/routes/portfolio.py
+app/backtest/__init__.py
+app/backtest/service.py
+app/backtest/store.py
 app/bot/__init__.py
 app/bot/control.py
 app/configuration/__init__.py
@@ -59,6 +63,7 @@ aurum_api.egg-info/dependency_links.txt
 aurum_api.egg-info/entry_points.txt
 aurum_api.egg-info/requires.txt
 aurum_api.egg-info/top_level.txt
+tests/test_backtest_engine.py
 tests/test_binance_market.py
 tests/test_binance_private.py
 tests/test_bot_control.py

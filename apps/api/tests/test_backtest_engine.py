@@ -25,8 +25,8 @@ def _candle(
 
 
 def _entry_fixture() -> list[StrategyCandle]:
-    """203 candles that trigger one BUY signal; same as the legacy backtest fixture."""
-    closes = [Decimal("90")] * 185
+    """223 candles that trigger one BUY signal; 205 flat + 18 variable gives sma_long_prev data."""
+    closes = [Decimal("90")] * 205
     closes += [
         Decimal("100"),
         Decimal("90"),

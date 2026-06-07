@@ -94,6 +94,7 @@ def compute_indicator_snapshot(
     *,
     sma_short_period: int = 50,
     sma_long_period: int = 200,
+    sma_slope_lookback: int = 20,
     rsi_period: int = 14,
     atr_period: int = 14,
     volume_average_period: int = 20,
@@ -109,6 +110,21 @@ def compute_indicator_snapshot(
     if atr is not None and latest.close_price != 0:
         atr_pct = (atr / latest.close_price) * ONE_HUNDRED
 
+    sma_long_prev: Decimal | None = None
+    required = sma_long_period + sma_slope_lookback
+    if len(closes) >= required:
+        prev_window = closes[-(required):-sma_slope_lookback]
+        sma_long_prev = simple_moving_average(prev_window, sma_long_period)
+
+    current_true_range: Decimal | None = None
+    if len(candles) >= 2:
+        c, p = candles[-1], candles[-2]
+        current_true_range = max(
+            c.high_price - c.low_price,
+            abs(c.high_price - p.close_price),
+            abs(c.low_price - p.close_price),
+        )
+
     return IndicatorSnapshot(
         close_price=latest.close_price,
         current_volume=latest.volume,
@@ -119,4 +135,6 @@ def compute_indicator_snapshot(
         atr_pct=atr_pct,
         average_volume=average_volume(candles, volume_average_period),
         breakout_high_20=breakout_high(candles, breakout_lookback),
+        sma_long_prev=sma_long_prev,
+        current_true_range=current_true_range,
     )
